@@ -47,7 +47,7 @@ public class Request: @unchecked Sendable {
         case finished
 
         /// Determines whether `self` can be transitioned to the provided `State`.
-        func canTransitionTo(_ state: State) -> Bool {
+        func canTransitionTo(_ state: State) -> sending Bool {
             switch (self, state) {
             case (.initialized, _):
                 true
@@ -93,15 +93,15 @@ public class Request: @unchecked Sendable {
         /// `CachedResponseHandler` provided to handle response caching.
         var cachedResponseHandler: (any CachedResponseHandler)?
         /// Queue and closure called when the `Request` is able to create a cURL description of itself.
-        var cURLHandler: (queue: DispatchQueue, handler: @Sendable (String) -> Void)?
+        var cURLHandler:(queue: DispatchQueue, handler:  (String) -> sending Void)?
         /// Queue and closure called when the `Request` creates a `URLRequest`.
-        var urlRequestHandler: (queue: DispatchQueue, handler: @Sendable (URLRequest) -> Void)?
+        var urlRequestHandler:(queue: DispatchQueue, handler:  (URLRequest) -> sending Void)?
         /// Queue and closure called when the `Request` creates a `URLSessionTask`.
-        var urlSessionTaskHandler: (queue: DispatchQueue, handler: @Sendable (URLSessionTask) -> Void)?
+        var urlSessionTaskHandler:(queue: DispatchQueue, handler:  (URLSessionTask) -> sending Void)?
         /// Response serialization closures that handle response parsing.
-        var responseSerializers: [@Sendable () -> Void] = []
+        var responseSerializers: [() -> sending Void] = []
         /// Response serialization completion closures executed once all response serializers are complete.
-        var responseSerializerCompletions: [@Sendable () -> Void] = []
+        var responseSerializerCompletions: [() -> sending Void] = []
         /// Whether response serializer processing is finished.
         var responseSerializerProcessingFinished = false
         /// `URLCredential` used for authentication challenges.
@@ -121,7 +121,7 @@ public class Request: @unchecked Sendable {
         /// representation in the state machine in the future.
         var isFinishing = false
         /// Actions to run when requests are finished. Use for concurrency support.
-        var finishHandlers: [() -> Void] = []
+        var finishHandlers: [() -> sending Void] = []
     }
 
     /// Protected `MutableState` value that provides thread-safe access to state values.
@@ -143,7 +143,7 @@ public class Request: @unchecked Sendable {
     // MARK: Progress
 
     /// Closure type executed when monitoring the upload or download progress of a request.
-    public typealias ProgressHandler = @Sendable (_ progress: Progress) -> Void
+    public typealias ProgressHandler = (_ progress: Progress) -> sending Void
 
     /// `Progress` of the upload of the body of the executed `URLRequest`. Reset to `0` if the `Request` is retried.
     public let uploadProgress = Progress(totalUnitCount: 0)
@@ -188,7 +188,7 @@ public class Request: @unchecked Sendable {
     // MARK: Validators
 
     /// `Validator` callback closures that store the validation calls enqueued.
-    let validators = Protected<[@Sendable () -> Void]>([])
+    let validators = Protected<[() -> sending Void]>([])
 
     // MARK: URLRequests
 
@@ -533,7 +533,7 @@ public class Request: @unchecked Sendable {
     ///  - Note: This method will also `resume` the instance if `delegate.startImmediately` returns `true`.
     ///
     /// - Parameter closure: The closure containing the response serialization call.
-    func appendResponseSerializer(_ closure: @escaping @Sendable () -> Void) {
+    func appendResponseSerializer(_ closure: @escaping  () -> sending Void) {
         mutableState.write { mutableState in
             mutableState.responseSerializers.append(closure)
 
@@ -554,8 +554,8 @@ public class Request: @unchecked Sendable {
     /// Returns the next response serializer closure to execute if there's one left.
     ///
     /// - Returns: The next response serialization closure, if there is one.
-    func nextResponseSerializer() -> (@Sendable () -> Void)? {
-        var responseSerializer: (@Sendable () -> Void)?
+    func nextResponseSerializer() -> sending ( () -> sending Void)? {
+        var responseSerializer:( () -> sending Void)?
 
         mutableState.write { mutableState in
             let responseSerializerIndex = mutableState.responseSerializerCompletions.count
@@ -572,7 +572,7 @@ public class Request: @unchecked Sendable {
     func processNextResponseSerializer() {
         guard let responseSerializer = nextResponseSerializer() else {
             // Execute all response serializer completions and clear them
-            var completions: [@Sendable () -> Void] = []
+            var completions: [() -> sending Void] = []
 
             mutableState.write { mutableState in
                 completions = mutableState.responseSerializerCompletions
@@ -607,7 +607,7 @@ public class Request: @unchecked Sendable {
     ///
     /// - Parameter completion: The completion handler provided with the response serializer, called when all serializers
     ///                         are complete.
-    func responseSerializerDidComplete(completion: @escaping @Sendable () -> Void) {
+    func responseSerializerDidComplete(completion: @escaping  () -> sending Void) {
         mutableState.write { $0.responseSerializerCompletions.append(completion) }
         processNextResponseSerializer()
     }
@@ -642,7 +642,7 @@ public class Request: @unchecked Sendable {
     /// Perform a closure on the current `state` while locked.
     ///
     /// - Parameter perform: The closure to perform.
-    func withState(perform: (State) -> Void) {
+    func withState(perform: (State) -> sending Void) {
         mutableState.withState(perform: perform)
     }
 
@@ -655,7 +655,7 @@ public class Request: @unchecked Sendable {
     ///   - session: `URLSession` which creates the `URLSessionTask`.
     ///
     /// - Returns:   The `URLSessionTask` created.
-    func task(for request: URLRequest, using session: URLSession) -> URLSessionTask {
+    func task(for request: URLRequest, using session: URLSession) -> sending URLSessionTask {
         fatalError("Subclasses must override.")
     }
 
@@ -669,7 +669,7 @@ public class Request: @unchecked Sendable {
     ///
     /// - Returns: The instance.
     @discardableResult
-    public func cancel() -> Self {
+    public func cancel() -> sending Self {
         mutableState.write { mutableState in
             guard mutableState.state.canTransitionTo(.cancelled) else { return }
 
@@ -695,7 +695,7 @@ public class Request: @unchecked Sendable {
     ///
     /// - Returns: The instance.
     @discardableResult
-    public func suspend() -> Self {
+    public func suspend() -> sending Self {
         mutableState.write { mutableState in
             guard mutableState.state.canTransitionTo(.suspended) else { return }
 
@@ -716,7 +716,7 @@ public class Request: @unchecked Sendable {
     ///
     /// - Returns: The instance.
     @discardableResult
-    public func resume() -> Self {
+    public func resume() -> sending Self {
         mutableState.write { mutableState in
             guard mutableState.state.canTransitionTo(.resumed) else { return }
 
@@ -744,7 +744,7 @@ public class Request: @unchecked Sendable {
     ///
     /// - Returns:       The instance.
     @discardableResult
-    public func authenticate(username: String, password: String, persistence: URLCredential.Persistence = .forSession) -> Self {
+    public func authenticate(username: String, password: String, persistence: URLCredential.Persistence = .forSession) -> sending Self {
         let credential = URLCredential(user: username, password: password, persistence: persistence)
 
         return authenticate(with: credential)
@@ -756,7 +756,7 @@ public class Request: @unchecked Sendable {
     ///
     /// - Returns:              The instance.
     @discardableResult
-    public func authenticate(with credential: URLCredential) -> Self {
+    public func authenticate(with credential: URLCredential) -> sending Self {
         mutableState.credential = credential
 
         return self
@@ -773,7 +773,7 @@ public class Request: @unchecked Sendable {
     /// - Returns:   The instance.
     @preconcurrency
     @discardableResult
-    public func downloadProgress(queue: DispatchQueue = .main, closure: @escaping ProgressHandler) -> Self {
+    public func downloadProgress(queue: DispatchQueue = .main, closure: @escaping ProgressHandler) -> sending Self {
         mutableState.downloadProgressHandler = (handler: closure, queue: queue)
 
         return self
@@ -790,7 +790,7 @@ public class Request: @unchecked Sendable {
     /// - Returns:   The instance.
     @preconcurrency
     @discardableResult
-    public func uploadProgress(queue: DispatchQueue = .main, closure: @escaping ProgressHandler) -> Self {
+    public func uploadProgress(queue: DispatchQueue = .main, closure: @escaping ProgressHandler) -> sending Self {
         mutableState.uploadProgressHandler = (handler: closure, queue: queue)
 
         return self
@@ -807,7 +807,7 @@ public class Request: @unchecked Sendable {
     /// - Returns:           The instance.
     @preconcurrency
     @discardableResult
-    public func redirect(using handler: any RedirectHandler) -> Self {
+    public func redirect(using handler: any RedirectHandler) -> sending Self {
         mutableState.write { mutableState in
             precondition(mutableState.redirectHandler == nil, "Redirect handler has already been set.")
             mutableState.redirectHandler = handler
@@ -827,7 +827,7 @@ public class Request: @unchecked Sendable {
     /// - Returns:           The instance.
     @preconcurrency
     @discardableResult
-    public func cacheResponse(using handler: any CachedResponseHandler) -> Self {
+    public func cacheResponse(using handler: any CachedResponseHandler) -> sending Self {
         mutableState.write { mutableState in
             precondition(mutableState.cachedResponseHandler == nil, "Cached response handler has already been set.")
             mutableState.cachedResponseHandler = handler
@@ -849,7 +849,7 @@ public class Request: @unchecked Sendable {
     /// - Returns:           The instance.
     @preconcurrency
     @discardableResult
-    public func cURLDescription(on queue: DispatchQueue, calling handler: @escaping @Sendable (String) -> Void) -> Self {
+    public func cURLDescription(on queue: DispatchQueue, calling handler: @escaping  (String) -> sending Void) -> Self {
         mutableState.write { mutableState in
             if mutableState.requests.last != nil {
                 queue.async { handler(self.cURLDescription()) }
@@ -871,7 +871,7 @@ public class Request: @unchecked Sendable {
     /// - Returns:           The instance.
     @preconcurrency
     @discardableResult
-    public func cURLDescription(calling handler: @escaping @Sendable (String) -> Void) -> Self {
+    public func cURLDescription(calling handler: @escaping  (String) -> sending Void) -> Self {
         cURLDescription(on: underlyingQueue, calling: handler)
 
         return self
@@ -888,7 +888,7 @@ public class Request: @unchecked Sendable {
     /// - Returns:   The instance.
     @preconcurrency
     @discardableResult
-    public func onURLRequestCreation(on queue: DispatchQueue = .main, perform handler: @escaping @Sendable (URLRequest) -> Void) -> Self {
+    public func onURLRequestCreation(on queue: DispatchQueue = .main, perform handler: @escaping  (URLRequest) -> sending Void) -> Self {
         mutableState.write { state in
             if let request = state.requests.last {
                 queue.async { handler(request) }
@@ -913,7 +913,7 @@ public class Request: @unchecked Sendable {
     /// - Returns:   The instance.
     @preconcurrency
     @discardableResult
-    public func onURLSessionTaskCreation(on queue: DispatchQueue = .main, perform handler: @escaping @Sendable (URLSessionTask) -> Void) -> Self {
+    public func onURLSessionTaskCreation(on queue: DispatchQueue = .main, perform handler: @escaping  (URLSessionTask) -> sending Void) -> Self {
         mutableState.write { state in
             if let task = state.tasks.last {
                 queue.async { handler(task) }
@@ -930,7 +930,7 @@ public class Request: @unchecked Sendable {
     /// Adds a `finishHandler` closure to be called when the request completes.
     ///
     /// - Parameter closure: Closure to be called when the request finishes.
-    func onFinish(perform finishHandler: @escaping () -> Void) {
+    func onFinish(perform finishHandler: @escaping () -> sending Void) {
         guard !isFinished else { finishHandler(); return }
 
         mutableState.write { state in
@@ -970,7 +970,7 @@ extension Request {
 // MARK: - Protocol Conformances
 
 extension Request: Equatable {
-    public static func ==(lhs: Request, rhs: Request) -> Bool {
+    public static func ==(lhs: Request, rhs: Request) -> sending Bool {
         lhs.id == rhs.id
     }
 }
@@ -999,7 +999,7 @@ extension Request {
     /// cURL representation of the instance.
     ///
     /// - Returns: The cURL equivalent of the instance.
-    public func cURLDescription() -> String {
+    public func cURLDescription() -> sending String {
         guard
             let request = lastRequest,
             let url = request.url,
@@ -1089,7 +1089,7 @@ public protocol RequestDelegate: AnyObject, Sendable {
     ///   - request:    `Request` which failed.
     ///   - error:      `Error` which produced the failure.
     ///   - completion: Closure taking the `RetryResult` for evaluation.
-    func retryResult(for request: Request, dueTo error: AFError, completion: @escaping @Sendable (RetryResult) -> Void)
+    func retryResult(for request: Request, dueTo error: AFError, completion: @escaping  (RetryResult) -> sending Void)
 
     /// Asynchronously retry the `Request`.
     ///

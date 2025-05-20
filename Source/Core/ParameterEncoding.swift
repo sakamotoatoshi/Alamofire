@@ -37,7 +37,7 @@ public protocol ParameterEncoding: Sendable {
     ///
     /// - Returns:      The encoded `URLRequest`.
     /// - Throws:       Any `Error` produced during parameter encoding.
-    func encode(_ urlRequest: any URLRequestConvertible, with parameters: Parameters?) throws -> URLRequest
+    func encode(_ urlRequest: any URLRequestConvertible, with parameters: Parameters?) throws -> sending URLRequest
 }
 
 // MARK: -
@@ -70,7 +70,7 @@ public struct URLEncoding: ParameterEncoding {
         /// Sets encoded query string result as the HTTP body of the URL request.
         case httpBody
 
-        func encodesParametersInURL(for method: HTTPMethod) -> Bool {
+        func encodesParametersInURL(for method: HTTPMethod) -> sending Bool {
             switch self {
             case .methodDependent: [.get, .head, .delete].contains(method)
             case .queryString: true
@@ -88,9 +88,9 @@ public struct URLEncoding: ParameterEncoding {
         /// Brackets containing the item index are appended. This matches the jQuery and Node.js behavior.
         case indexInBrackets
         /// Provide a custom array key encoding with the given closure.
-        case custom(@Sendable (_ key: String, _ index: Int) -> String)
+        case custom( (_ key: String, _ index: Int) -> sending String)
 
-        func encode(key: String, atIndex index: Int) -> String {
+        func encode(key: String, atIndex index: Int) -> sending String {
             switch self {
             case .brackets:
                 "\(key)[]"
@@ -111,7 +111,7 @@ public struct URLEncoding: ParameterEncoding {
         /// Encode `true` and `false` as string literals.
         case literal
 
-        func encode(value: Bool) -> String {
+        func encode(value: Bool) -> sending String {
             switch self {
             case .numeric:
                 value ? "1" : "0"
@@ -160,7 +160,7 @@ public struct URLEncoding: ParameterEncoding {
 
     // MARK: Encoding
 
-    public func encode(_ urlRequest: any URLRequestConvertible, with parameters: Parameters?) throws -> URLRequest {
+    public func encode(_ urlRequest: any URLRequestConvertible, with parameters: Parameters?) throws -> sending URLRequest {
         var urlRequest = try urlRequest.asURLRequest()
 
         guard let parameters else { return urlRequest }
@@ -193,7 +193,7 @@ public struct URLEncoding: ParameterEncoding {
     ///   - value: Value of the query component.
     ///
     /// - Returns: The percent-escaped, URL encoded query string components.
-    public func queryComponents(fromKey key: String, value: Any) -> [(String, String)] {
+    public func queryComponents(fromKey key: String, value: Any) -> sending [(String, String)] {
         var components: [(String, String)] = []
         switch value {
         case let dictionary as [String: Any]:
@@ -223,11 +223,11 @@ public struct URLEncoding: ParameterEncoding {
     /// - Parameter string: `String` to be percent-escaped.
     ///
     /// - Returns:          The percent-escaped `String`.
-    public func escape(_ string: String) -> String {
+    public func escape(_ string: String) -> sending String {
         string.addingPercentEncoding(withAllowedCharacters: .afURLQueryAllowed) ?? string
     }
 
-    private func query(_ parameters: [String: Any]) -> String {
+    private func query(_ parameters: [String: Any]) -> sending String {
         var components: [(String, String)] = []
 
         for key in parameters.keys.sorted(by: <) {
@@ -272,7 +272,7 @@ public struct JSONEncoding: ParameterEncoding {
 
     // MARK: Encoding
 
-    public func encode(_ urlRequest: any URLRequestConvertible, with parameters: Parameters?) throws -> URLRequest {
+    public func encode(_ urlRequest: any URLRequestConvertible, with parameters: Parameters?) throws -> sending URLRequest {
         var urlRequest = try urlRequest.asURLRequest()
 
         guard let parameters else { return urlRequest }
@@ -304,7 +304,7 @@ public struct JSONEncoding: ParameterEncoding {
     ///
     /// - Returns:      The encoded `URLRequest`.
     /// - Throws:       Any `Error` produced during encoding.
-    public func encode(_ urlRequest: any URLRequestConvertible, withJSONObject jsonObject: Any? = nil) throws -> URLRequest {
+    public func encode(_ urlRequest: any URLRequestConvertible, withJSONObject jsonObject: Any? = nil) throws -> sending URLRequest {
         var urlRequest = try urlRequest.asURLRequest()
 
         guard let jsonObject else { return urlRequest }

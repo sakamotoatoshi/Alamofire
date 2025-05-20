@@ -35,7 +35,7 @@ extension Request {
     /// - Parameter bufferingPolicy: `BufferingPolicy` that determines the stream's buffering behavior.`.unbounded` by default.
     ///
     /// - Returns:                   The `StreamOf<Progress>`.
-    public func uploadProgress(bufferingPolicy: StreamOf<Progress>.BufferingPolicy = .unbounded) -> StreamOf<Progress> {
+    public func uploadProgress(bufferingPolicy: StreamOf<Progress>.BufferingPolicy = .unbounded) -> sending StreamOf<Progress> {
         stream(bufferingPolicy: bufferingPolicy) { [unowned self] continuation in
             uploadProgress(queue: underlyingQueue) { progress in
                 continuation.yield(progress)
@@ -48,7 +48,7 @@ extension Request {
     /// - Parameter bufferingPolicy: `BufferingPolicy` that determines the stream's buffering behavior.`.unbounded` by default.
     ///
     /// - Returns:                   The `StreamOf<Progress>`.
-    public func downloadProgress(bufferingPolicy: StreamOf<Progress>.BufferingPolicy = .unbounded) -> StreamOf<Progress> {
+    public func downloadProgress(bufferingPolicy: StreamOf<Progress>.BufferingPolicy = .unbounded) -> sending StreamOf<Progress> {
         stream(bufferingPolicy: bufferingPolicy) { [unowned self] continuation in
             downloadProgress(queue: underlyingQueue) { progress in
                 continuation.yield(progress)
@@ -61,7 +61,7 @@ extension Request {
     /// - Parameter bufferingPolicy: `BufferingPolicy` that determines the stream's buffering behavior.`.unbounded` by default.
     ///
     /// - Returns:                   The `StreamOf<URLRequest>`.
-    public func urlRequests(bufferingPolicy: StreamOf<URLRequest>.BufferingPolicy = .unbounded) -> StreamOf<URLRequest> {
+    public func urlRequests(bufferingPolicy: StreamOf<URLRequest>.BufferingPolicy = .unbounded) -> sending StreamOf<URLRequest> {
         stream(bufferingPolicy: bufferingPolicy) { [unowned self] continuation in
             onURLRequestCreation(on: underlyingQueue) { request in
                 continuation.yield(request)
@@ -74,7 +74,7 @@ extension Request {
     /// - Parameter bufferingPolicy: `BufferingPolicy` that determines the stream's buffering behavior.`.unbounded` by default.
     ///
     /// - Returns:                   The `StreamOf<URLSessionTask>`.
-    public func urlSessionTasks(bufferingPolicy: StreamOf<URLSessionTask>.BufferingPolicy = .unbounded) -> StreamOf<URLSessionTask> {
+    public func urlSessionTasks(bufferingPolicy: StreamOf<URLSessionTask>.BufferingPolicy = .unbounded) -> sending StreamOf<URLSessionTask> {
         stream(bufferingPolicy: bufferingPolicy) { [unowned self] continuation in
             onURLSessionTaskCreation(on: underlyingQueue) { task in
                 continuation.yield(task)
@@ -87,7 +87,7 @@ extension Request {
     /// - Parameter bufferingPolicy: `BufferingPolicy` that determines the stream's buffering behavior.`.unbounded` by default.
     ///
     /// - Returns:                   The `StreamOf<String>`.
-    public func cURLDescriptions(bufferingPolicy: StreamOf<String>.BufferingPolicy = .unbounded) -> StreamOf<String> {
+    public func cURLDescriptions(bufferingPolicy: StreamOf<String>.BufferingPolicy = .unbounded) -> sending StreamOf<String> {
         stream(bufferingPolicy: bufferingPolicy) { [unowned self] continuation in
             cURLDescription(on: underlyingQueue) { description in
                 continuation.yield(description)
@@ -97,7 +97,7 @@ extension Request {
 
     fileprivate func stream<T>(of type: T.Type = T.self,
                                bufferingPolicy: StreamOf<T>.BufferingPolicy = .unbounded,
-                               yielder: @escaping (StreamOf<T>.Continuation) -> Void) -> StreamOf<T> {
+                               yielder: @escaping (StreamOf<T>.Continuation) -> sending Void) -> StreamOf<T> {
         StreamOf<T>(bufferingPolicy: bufferingPolicy) { [unowned self] continuation in
             yielder(continuation)
             // Must come after serializers run in order to catch retry progress.
@@ -173,7 +173,7 @@ extension DataRequest {
     /// - Parameter bufferingPolicy: `BufferingPolicy` that determines the stream's buffering behavior.`.unbounded` by default.
     ///
     /// - Returns:                   The `StreamOf<HTTPURLResponse>`.
-    public func httpResponses(bufferingPolicy: StreamOf<HTTPURLResponse>.BufferingPolicy = .unbounded) -> StreamOf<HTTPURLResponse> {
+    public func httpResponses(bufferingPolicy: StreamOf<HTTPURLResponse>.BufferingPolicy = .unbounded) -> sending StreamOf<HTTPURLResponse> {
         stream(bufferingPolicy: bufferingPolicy) { [unowned self] continuation in
             onHTTPResponse(on: underlyingQueue) { response in
                 continuation.yield(response)
@@ -198,7 +198,7 @@ extension DataRequest {
     @_disfavoredOverload
     @discardableResult
     public func onHTTPResponse(
-        perform handler: @escaping @Sendable (_ response: HTTPURLResponse) async -> ResponseDisposition
+        perform handler: @escaping  (_ response: HTTPURLResponse) async -> sending ResponseDisposition
     ) -> Self {
         onHTTPResponse(on: underlyingQueue) { response, completionHandler in
             Task {
@@ -222,7 +222,7 @@ extension DataRequest {
     ///
     /// - Returns:   The instance.
     @discardableResult
-    public func onHTTPResponse(perform handler: @escaping @Sendable (_ response: HTTPURLResponse) async -> Void) -> Self {
+    public func onHTTPResponse(perform handler: @escaping  (_ response: HTTPURLResponse) async -> sending Void) -> Self {
         onHTTPResponse { response in
             await handler(response)
             return .allow
@@ -245,7 +245,7 @@ extension DataRequest {
     public func serializingData(automaticallyCancelling shouldAutomaticallyCancel: Bool = true,
                                 dataPreprocessor: any DataPreprocessor = DataResponseSerializer.defaultDataPreprocessor,
                                 emptyResponseCodes: Set<Int> = DataResponseSerializer.defaultEmptyResponseCodes,
-                                emptyRequestMethods: Set<HTTPMethod> = DataResponseSerializer.defaultEmptyRequestMethods) -> DataTask<Data> {
+                                emptyRequestMethods: Set<HTTPMethod> = DataResponseSerializer.defaultEmptyRequestMethods) -> sending DataTask<Data> {
         serializingResponse(using: DataResponseSerializer(dataPreprocessor: dataPreprocessor,
                                                           emptyResponseCodes: emptyResponseCodes,
                                                           emptyRequestMethods: emptyRequestMethods),
@@ -298,7 +298,7 @@ extension DataRequest {
                                   dataPreprocessor: any DataPreprocessor = StringResponseSerializer.defaultDataPreprocessor,
                                   encoding: String.Encoding? = nil,
                                   emptyResponseCodes: Set<Int> = StringResponseSerializer.defaultEmptyResponseCodes,
-                                  emptyRequestMethods: Set<HTTPMethod> = StringResponseSerializer.defaultEmptyRequestMethods) -> DataTask<String> {
+                                  emptyRequestMethods: Set<HTTPMethod> = StringResponseSerializer.defaultEmptyRequestMethods) -> sending DataTask<String> {
         serializingResponse(using: StringResponseSerializer(dataPreprocessor: dataPreprocessor,
                                                             encoding: encoding,
                                                             emptyResponseCodes: emptyResponseCodes,
@@ -316,8 +316,7 @@ extension DataRequest {
     ///
     /// - Returns: The `DataTask`.
     public func serializingResponse<Serializer: ResponseSerializer>(using serializer: Serializer,
-                                                                    automaticallyCancelling shouldAutomaticallyCancel: Bool = true)
-        -> DataTask<Serializer.SerializedObject> {
+                                                                    automaticallyCancelling shouldAutomaticallyCancel: Bool = true) -> sending DataTask<Serializer.SerializedObject> {
         dataTask(automaticallyCancelling: shouldAutomaticallyCancel) { [self] in
             response(queue: underlyingQueue,
                      responseSerializer: serializer,
@@ -336,8 +335,7 @@ extension DataRequest {
     ///
     /// - Returns: The `DataTask`.
     public func serializingResponse<Serializer: DataResponseSerializerProtocol>(using serializer: Serializer,
-                                                                                automaticallyCancelling shouldAutomaticallyCancel: Bool = true)
-        -> DataTask<Serializer.SerializedObject> {
+                                                                                automaticallyCancelling shouldAutomaticallyCancel: Bool = true) -> sending DataTask<Serializer.SerializedObject> {
         dataTask(automaticallyCancelling: shouldAutomaticallyCancel) { [self] in
             response(queue: underlyingQueue,
                      responseSerializer: serializer,
@@ -346,7 +344,7 @@ extension DataRequest {
     }
 
     private func dataTask<Value>(automaticallyCancelling shouldAutomaticallyCancel: Bool,
-                                 forResponse onResponse: @Sendable @escaping (@escaping @Sendable (DataResponse<Value, AFError>) -> Void) -> Void)
+                                 forResponse onResponse:  @escaping (@escaping  (DataResponse<Value, AFError>) -> sending Void) -> Void)
         -> DataTask<Value> {
         let task = Task {
             await withTaskCancellationHandler {
@@ -438,7 +436,7 @@ extension DownloadRequest {
     public func serializingData(automaticallyCancelling shouldAutomaticallyCancel: Bool = true,
                                 dataPreprocessor: any DataPreprocessor = DataResponseSerializer.defaultDataPreprocessor,
                                 emptyResponseCodes: Set<Int> = DataResponseSerializer.defaultEmptyResponseCodes,
-                                emptyRequestMethods: Set<HTTPMethod> = DataResponseSerializer.defaultEmptyRequestMethods) -> DownloadTask<Data> {
+                                emptyRequestMethods: Set<HTTPMethod> = DataResponseSerializer.defaultEmptyRequestMethods) -> sending DownloadTask<Data> {
         serializingDownload(using: DataResponseSerializer(dataPreprocessor: dataPreprocessor,
                                                           emptyResponseCodes: emptyResponseCodes,
                                                           emptyRequestMethods: emptyRequestMethods),
@@ -482,7 +480,7 @@ extension DownloadRequest {
     ///                                properties. `true` by default.
     ///
     /// - Returns: The `DownloadTask`.
-    public func serializingDownloadedFileURL(automaticallyCancelling shouldAutomaticallyCancel: Bool = true) -> DownloadTask<URL> {
+    public func serializingDownloadedFileURL(automaticallyCancelling shouldAutomaticallyCancel: Bool = true) -> sending DownloadTask<URL> {
         serializingDownload(using: URLResponseSerializer(),
                             automaticallyCancelling: shouldAutomaticallyCancel)
     }
@@ -506,7 +504,7 @@ extension DownloadRequest {
                                   dataPreprocessor: any DataPreprocessor = StringResponseSerializer.defaultDataPreprocessor,
                                   encoding: String.Encoding? = nil,
                                   emptyResponseCodes: Set<Int> = StringResponseSerializer.defaultEmptyResponseCodes,
-                                  emptyRequestMethods: Set<HTTPMethod> = StringResponseSerializer.defaultEmptyRequestMethods) -> DownloadTask<String> {
+                                  emptyRequestMethods: Set<HTTPMethod> = StringResponseSerializer.defaultEmptyRequestMethods) -> sending DownloadTask<String> {
         serializingDownload(using: StringResponseSerializer(dataPreprocessor: dataPreprocessor,
                                                             encoding: encoding,
                                                             emptyResponseCodes: emptyResponseCodes,
@@ -524,8 +522,7 @@ extension DownloadRequest {
     ///
     /// - Returns: The `DownloadTask`.
     public func serializingDownload<Serializer: ResponseSerializer>(using serializer: Serializer,
-                                                                    automaticallyCancelling shouldAutomaticallyCancel: Bool = true)
-        -> DownloadTask<Serializer.SerializedObject> {
+                                                                    automaticallyCancelling shouldAutomaticallyCancel: Bool = true) -> sending DownloadTask<Serializer.SerializedObject> {
         downloadTask(automaticallyCancelling: shouldAutomaticallyCancel) { [self] in
             response(queue: underlyingQueue,
                      responseSerializer: serializer,
@@ -545,8 +542,7 @@ extension DownloadRequest {
     ///
     /// - Returns: The `DownloadTask`.
     public func serializingDownload<Serializer: DownloadResponseSerializerProtocol>(using serializer: Serializer,
-                                                                                    automaticallyCancelling shouldAutomaticallyCancel: Bool = true)
-        -> DownloadTask<Serializer.SerializedObject> {
+                                                                                    automaticallyCancelling shouldAutomaticallyCancel: Bool = true) -> sending DownloadTask<Serializer.SerializedObject> {
         downloadTask(automaticallyCancelling: shouldAutomaticallyCancel) { [self] in
             response(queue: underlyingQueue,
                      responseSerializer: serializer,
@@ -555,7 +551,7 @@ extension DownloadRequest {
     }
 
     private func downloadTask<Value>(automaticallyCancelling shouldAutomaticallyCancel: Bool,
-                                     forResponse onResponse: @Sendable @escaping (@escaping @Sendable (DownloadResponse<Value, AFError>) -> Void) -> Void)
+                                     forResponse onResponse:  @escaping (@escaping  (DownloadResponse<Value, AFError>) -> sending Void) -> Void)
         -> DownloadTask<Value> {
         let task = Task {
             await withTaskCancellationHandler {
@@ -594,7 +590,7 @@ public struct DataStreamTask: Sendable {
     ///   - bufferingPolicy: `         BufferingPolicy` that determines the stream's buffering behavior.`.unbounded` by default.
     ///
     /// - Returns:                   The `Stream`.
-    public func streamingData(automaticallyCancelling shouldAutomaticallyCancel: Bool = true, bufferingPolicy: Stream<Data, Never>.BufferingPolicy = .unbounded) -> Stream<Data, Never> {
+    public func streamingData(automaticallyCancelling shouldAutomaticallyCancel: Bool = true, bufferingPolicy: Stream<Data, Never>.BufferingPolicy = .unbounded) -> sending Stream<Data, Never> {
         createStream(automaticallyCancelling: shouldAutomaticallyCancel, bufferingPolicy: bufferingPolicy) { onStream in
             request.responseStream(on: .streamCompletionQueue(forRequestID: request.id), stream: onStream)
         }
@@ -607,7 +603,7 @@ public struct DataStreamTask: Sendable {
     ///                                which observation of the stream stops. `true` by default.
     ///   - bufferingPolicy: `         BufferingPolicy` that determines the stream's buffering behavior.`.unbounded` by default.
     /// - Returns:
-    public func streamingStrings(automaticallyCancelling shouldAutomaticallyCancel: Bool = true, bufferingPolicy: Stream<String, Never>.BufferingPolicy = .unbounded) -> Stream<String, Never> {
+    public func streamingStrings(automaticallyCancelling shouldAutomaticallyCancel: Bool = true, bufferingPolicy: Stream<String, Never>.BufferingPolicy = .unbounded) -> sending Stream<String, Never> {
         createStream(automaticallyCancelling: shouldAutomaticallyCancel, bufferingPolicy: bufferingPolicy) { onStream in
             request.responseStreamString(on: .streamCompletionQueue(forRequestID: request.id), stream: onStream)
         }
@@ -624,8 +620,7 @@ public struct DataStreamTask: Sendable {
     /// - Returns:            The `Stream`.
     public func streamingDecodables<T>(_ type: T.Type = T.self,
                                        automaticallyCancelling shouldAutomaticallyCancel: Bool = true,
-                                       bufferingPolicy: Stream<T, AFError>.BufferingPolicy = .unbounded)
-        -> Stream<T, AFError> where T: Decodable & Sendable {
+                                       bufferingPolicy: Stream<T, AFError>.BufferingPolicy = .unbounded) -> sending Stream<T, AFError> where T: Decodable & Sendable {
         streamingResponses(serializedUsing: DecodableStreamSerializer<T>(),
                            automaticallyCancelling: shouldAutomaticallyCancel,
                            bufferingPolicy: bufferingPolicy)
@@ -642,8 +637,7 @@ public struct DataStreamTask: Sendable {
     /// - Returns:           The `Stream`.
     public func streamingResponses<Serializer: DataStreamSerializer>(serializedUsing serializer: Serializer,
                                                                      automaticallyCancelling shouldAutomaticallyCancel: Bool = true,
-                                                                     bufferingPolicy: Stream<Serializer.SerializedObject, AFError>.BufferingPolicy = .unbounded)
-        -> Stream<Serializer.SerializedObject, AFError> {
+                                                                     bufferingPolicy: Stream<Serializer.SerializedObject, AFError>.BufferingPolicy = .unbounded) -> sending Stream<Serializer.SerializedObject, AFError> {
         createStream(automaticallyCancelling: shouldAutomaticallyCancel, bufferingPolicy: bufferingPolicy) { onStream in
             request.responseStream(using: serializer,
                                    on: .streamCompletionQueue(forRequestID: request.id),
@@ -653,7 +647,7 @@ public struct DataStreamTask: Sendable {
 
     private func createStream<Success, Failure: Error>(automaticallyCancelling shouldAutomaticallyCancel: Bool = true,
                                                        bufferingPolicy: Stream<Success, Failure>.BufferingPolicy = .unbounded,
-                                                       forResponse onResponse: @Sendable @escaping (@escaping @Sendable (DataStreamRequest.Stream<Success, Failure>) -> Void) -> Void)
+                                                       forResponse onResponse:  @escaping (@escaping  (DataStreamRequest.Stream<Success, Failure>) -> sending Void) -> Void)
         -> Stream<Success, Failure> {
         StreamOf(bufferingPolicy: bufferingPolicy) {
             guard shouldAutomaticallyCancel,
@@ -693,7 +687,7 @@ extension DataStreamRequest {
     /// - Parameter bufferingPolicy: `BufferingPolicy` that determines the stream's buffering behavior.`.unbounded` by default.
     ///
     /// - Returns:                   The `StreamOf<HTTPURLResponse>`.
-    public func httpResponses(bufferingPolicy: StreamOf<HTTPURLResponse>.BufferingPolicy = .unbounded) -> StreamOf<HTTPURLResponse> {
+    public func httpResponses(bufferingPolicy: StreamOf<HTTPURLResponse>.BufferingPolicy = .unbounded) -> sending StreamOf<HTTPURLResponse> {
         stream(bufferingPolicy: bufferingPolicy) { [unowned self] continuation in
             onHTTPResponse(on: underlyingQueue) { response in
                 continuation.yield(response)
@@ -717,7 +711,7 @@ extension DataStreamRequest {
     /// - Returns:   The instance.
     @_disfavoredOverload
     @discardableResult
-    public func onHTTPResponse(perform handler: @escaping @Sendable (HTTPURLResponse) async -> ResponseDisposition) -> Self {
+    public func onHTTPResponse(perform handler: @escaping  (HTTPURLResponse) async -> sending ResponseDisposition) -> Self {
         onHTTPResponse(on: underlyingQueue) { response, completionHandler in
             Task {
                 let disposition = await handler(response)
@@ -740,7 +734,7 @@ extension DataStreamRequest {
     ///
     /// - Returns:   The instance.
     @discardableResult
-    public func onHTTPResponse(perform handler: @escaping @Sendable (HTTPURLResponse) async -> Void) -> Self {
+    public func onHTTPResponse(perform handler: @escaping  (HTTPURLResponse) async -> sending Void) -> Self {
         onHTTPResponse { response in
             await handler(response)
             return .allow
@@ -752,7 +746,7 @@ extension DataStreamRequest {
     /// Creates a `DataStreamTask` used to `await` streams of serialized values.
     ///
     /// - Returns: The `DataStreamTask`.
-    public func streamTask() -> DataStreamTask {
+    public func streamTask() -> sending DataStreamTask {
         DataStreamTask(request: self)
     }
 }
@@ -773,7 +767,7 @@ extension DataStreamRequest {
     public func streamingMessageEvents(
         automaticallyCancelling shouldAutomaticallyCancel: Bool = true,
         bufferingPolicy: EventStreamOf<URLSessionWebSocketTask.Message, Never>.BufferingPolicy = .unbounded
-    ) -> EventStreamOf<URLSessionWebSocketTask.Message, Never> {
+    ) -> sending EventStreamOf<URLSessionWebSocketTask.Message, Never> {
         createStream(automaticallyCancelling: shouldAutomaticallyCancel,
                      bufferingPolicy: bufferingPolicy,
                      transform: { $0 }) { onEvent in
@@ -784,7 +778,7 @@ extension DataStreamRequest {
     public func streamingMessages(
         automaticallyCancelling shouldAutomaticallyCancel: Bool = true,
         bufferingPolicy: StreamOf<URLSessionWebSocketTask.Message>.BufferingPolicy = .unbounded
-    ) -> StreamOf<URLSessionWebSocketTask.Message> {
+    ) -> sending StreamOf<URLSessionWebSocketTask.Message> {
         createStream(automaticallyCancelling: shouldAutomaticallyCancel,
                      bufferingPolicy: bufferingPolicy,
                      transform: { $0.message }) { onEvent in
@@ -827,8 +821,8 @@ extension DataStreamRequest {
     private func createStream<Success, Value, Failure: Error>(
         automaticallyCancelling shouldAutomaticallyCancel: Bool,
         bufferingPolicy: StreamOf<Value>.BufferingPolicy,
-        transform: @escaping @Sendable (WebSocketRequest.Event<Success, Failure>) -> Value?,
-        forResponse onResponse: @Sendable @escaping (@escaping @Sendable (WebSocketRequest.Event<Success, Failure>) -> Void) -> Void
+        transform: @escaping  (WebSocketRequest.Event<Success, Failure>) -> sending Value?,
+        forResponse onResponse:  @escaping(@escaping  (WebSocketRequest.Event<Success, Failure>) -> sending Void) -> Void
     ) -> StreamOf<Value> {
         StreamOf(bufferingPolicy: bufferingPolicy) {
             guard shouldAutomaticallyCancel,
@@ -885,7 +879,7 @@ extension DataStreamRequest {
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension WebSocketRequest {
-    public func webSocketTask() -> WebSocketTask {
+    public func webSocketTask() -> sending WebSocketTask {
         WebSocketTask(request: self)
     }
 }
@@ -895,7 +889,7 @@ extension DispatchQueue {
     fileprivate static let singleEventQueue = DispatchQueue(label: "org.alamofire.concurrencySingleEventQueue",
                                                             attributes: .concurrent)
 
-    fileprivate static func streamCompletionQueue(forRequestID id: UUID) -> DispatchQueue {
+    fileprivate static func streamCompletionQueue(forRequestID id: UUID) -> sending DispatchQueue {
         DispatchQueue(label: "org.alamofire.concurrencyStreamCompletionQueue-\(id)", target: .singleEventQueue)
     }
 }
@@ -908,18 +902,18 @@ public struct StreamOf<Element>: AsyncSequence {
     fileprivate typealias Continuation = AsyncStream<Element>.Continuation
 
     private let bufferingPolicy: BufferingPolicy
-    private let onTermination: (() -> Void)?
-    private let builder: (Continuation) -> Void
+    private let onTermination:(() -> sending Void)?
+    private let builder:(Continuation) -> sending Void
 
     fileprivate init(bufferingPolicy: BufferingPolicy = .unbounded,
-                     onTermination: (() -> Void)? = nil,
-                     builder: @escaping (Continuation) -> Void) {
+                     onTermination: (() -> sending Void)? = nil,
+                     builder: @escaping(Continuation) -> sending Void) {
         self.bufferingPolicy = bufferingPolicy
         self.onTermination = onTermination
         self.builder = builder
     }
 
-    public func makeAsyncIterator() -> Iterator {
+    public func makeAsyncIterator() -> sending Iterator {
         var continuation: AsyncStream<Element>.Continuation?
         let stream = AsyncStream<Element>(bufferingPolicy: bufferingPolicy) { innerContinuation in
             continuation = innerContinuation
@@ -934,9 +928,9 @@ public struct StreamOf<Element>: AsyncSequence {
 
     public struct Iterator: AsyncIteratorProtocol {
         private final class Token {
-            private let onDeinit: () -> Void
+            private let onDeinit:() -> sending Void
 
-            init(onDeinit: @escaping () -> Void) {
+            init(onDeinit: @escaping () -> sending Void) {
                 self.onDeinit = onDeinit
             }
 
@@ -948,12 +942,12 @@ public struct StreamOf<Element>: AsyncSequence {
         private var iterator: AsyncStream<Element>.AsyncIterator
         private let token: Token
 
-        init(iterator: AsyncStream<Element>.AsyncIterator, onCancellation: @escaping () -> Void) {
+        init(iterator: AsyncStream<Element>.AsyncIterator, onCancellation: @escaping () -> sending Void) {
             self.iterator = iterator
             token = Token(onDeinit: onCancellation)
         }
 
-        public mutating func next() async -> Element? {
+        public mutating func next() async -> sending Element? {
             await iterator.next()
         }
     }

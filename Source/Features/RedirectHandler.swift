@@ -42,7 +42,7 @@ public protocol RedirectHandler: Sendable {
     func task(_ task: URLSessionTask,
               willBeRedirectedTo request: URLRequest,
               for response: HTTPURLResponse,
-              completion: @escaping (URLRequest?) -> Void)
+              completion: @escaping (URLRequest?) -> sending Void)
 }
 
 // MARK: -
@@ -56,7 +56,7 @@ public struct Redirector {
         /// Do not follow the redirect defined in the response.
         case doNotFollow
         /// Modify the redirect request defined in the response.
-        case modify(@Sendable (_ task: URLSessionTask, _ request: URLRequest, _ response: HTTPURLResponse) -> URLRequest?)
+        case modify( (_ task: URLSessionTask, _ request: URLRequest, _ response: HTTPURLResponse) -> sending URLRequest?)
     }
 
     /// Returns a `Redirector` with a `.follow` `Behavior`.
@@ -81,7 +81,7 @@ extension Redirector: RedirectHandler {
     public func task(_ task: URLSessionTask,
                      willBeRedirectedTo request: URLRequest,
                      for response: HTTPURLResponse,
-                     completion: @escaping (URLRequest?) -> Void) {
+                     completion: @escaping (URLRequest?) -> sending Void) {
         switch behavior {
         case .follow:
             completion(request)
@@ -105,7 +105,7 @@ extension RedirectHandler where Self == Redirector {
     ///
     /// - Parameter closure: Closure used to modify the redirect.
     /// - Returns:           The `Redirector`.
-    public static func modify(using closure: @escaping @Sendable (URLSessionTask, URLRequest, HTTPURLResponse) -> URLRequest?) -> Redirector {
+    public static func modify(using closure: @escaping  (URLSessionTask, URLRequest, HTTPURLResponse) -> sending URLRequest?) -> Redirector {
         Redirector(behavior: .modify(closure))
     }
 }

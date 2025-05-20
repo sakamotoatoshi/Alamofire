@@ -54,7 +54,7 @@ public struct DeflateRequestCompressor: Sendable, RequestInterceptor {
     /// Behavior to use when the outgoing `URLRequest` already has a `Content-Encoding` header.
     public let duplicateHeaderBehavior: DuplicateHeaderBehavior
     /// Closure which determines whether the outgoing body data should be compressed.
-    public let shouldCompressBodyData: @Sendable (_ bodyData: Data) -> Bool
+    public let shouldCompressBodyData: (_ bodyData: Data) -> sending Bool
 
     /// Creates an instance with the provided parameters.
     ///
@@ -62,12 +62,12 @@ public struct DeflateRequestCompressor: Sendable, RequestInterceptor {
     ///   - duplicateHeaderBehavior: `DuplicateHeaderBehavior` to use. `.error` by default.
     ///   - shouldCompressBodyData:  Closure which determines whether the outgoing body data should be compressed. `true` by default.
     public init(duplicateHeaderBehavior: DuplicateHeaderBehavior = .error,
-                shouldCompressBodyData: @escaping @Sendable (_ bodyData: Data) -> Bool = { _ in true }) {
+                shouldCompressBodyData: @escaping  (_ bodyData: Data) -> sending Bool = { _ in true }) {
         self.duplicateHeaderBehavior = duplicateHeaderBehavior
         self.shouldCompressBodyData = shouldCompressBodyData
     }
 
-    public func adapt(_ urlRequest: URLRequest, for session: Session, completion: @escaping (Result<URLRequest, any Error>) -> Void) {
+    public func adapt(_ urlRequest: URLRequest, for session: Session, completion: @escaping (Result<URLRequest, any Error>) -> sending Void) {
         // No need to compress unless we have body data. No support for compressing streams.
         guard let bodyData = urlRequest.httpBody else {
             completion(.success(urlRequest))
@@ -104,7 +104,7 @@ public struct DeflateRequestCompressor: Sendable, RequestInterceptor {
         }
     }
 
-    func deflate(_ data: Data) throws -> Data {
+    func deflate(_ data: Data) throws -> sending Data {
         var output = Data([0x78, 0x5E]) // Header
         try output.append((data as NSData).compressed(using: .zlib) as Data)
         var checksum = adler32Checksum(of: data).bigEndian
@@ -113,7 +113,7 @@ public struct DeflateRequestCompressor: Sendable, RequestInterceptor {
         return output
     }
 
-    func adler32Checksum(of data: Data) -> UInt32 {
+    func adler32Checksum(of data: Data) -> sending UInt32 {
         data.withUnsafeBytes { buffer in
             UInt32(adler32(1, buffer.baseAddress, UInt32(buffer.count)))
         }
@@ -137,7 +137,7 @@ extension RequestInterceptor where Self == DeflateRequestCompressor {
     /// - Returns: The `DeflateRequestCompressor`.
     public static func deflateCompressor(
         duplicateHeaderBehavior: DeflateRequestCompressor.DuplicateHeaderBehavior = .error,
-        shouldCompressBodyData: @escaping @Sendable (_ bodyData: Data) -> Bool = { _ in true }
+        shouldCompressBodyData: @escaping  (_ bodyData: Data) -> sending Bool = { _ in true }
     ) -> DeflateRequestCompressor {
         DeflateRequestCompressor(duplicateHeaderBehavior: duplicateHeaderBehavior,
                                  shouldCompressBodyData: shouldCompressBodyData)
