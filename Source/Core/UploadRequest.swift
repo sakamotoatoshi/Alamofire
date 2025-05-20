@@ -104,7 +104,7 @@ public final class UploadRequest: DataRequest, @unchecked Sendable {
         retryOrFinish(error: error)
     }
 
-    override func task(for request: URLRequest, using session: URLSession) -> URLSessionTask {
+    override func task(for request: URLRequest, using session: URLSession) -> sending URLSessionTask {
         guard let uploadable else {
             fatalError("Attempting to create a URLSessionUploadTask when Uploadable value doesn't exist.")
         }

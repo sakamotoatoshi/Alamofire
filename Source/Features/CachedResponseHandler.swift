@@ -40,7 +40,7 @@ public protocol CachedResponseHandler: Sendable {
     ///   - completion: The closure to execute containing cached response, a modified response, or `nil`.
     func dataTask(_ task: URLSessionDataTask,
                   willCacheResponse response: CachedURLResponse,
-                  completion: @escaping (CachedURLResponse?) -> Void)
+                  completion: @escaping (CachedURLResponse?) -> sending Void)
 }
 
 // MARK: -
@@ -55,7 +55,7 @@ public struct ResponseCacher {
         /// Prevents the cached response from being stored in the cache.
         case doNotCache
         /// Modifies the cached response before storing it in the cache.
-        case modify(@Sendable (_ task: URLSessionDataTask, _ cachedResponse: CachedURLResponse) -> CachedURLResponse?)
+        case modify( (_ task: URLSessionDataTask, _ cachedResponse: CachedURLResponse) -> sending CachedURLResponse?)
     }
 
     /// Returns a `ResponseCacher` with a `.cache` `Behavior`.
@@ -77,7 +77,7 @@ public struct ResponseCacher {
 extension ResponseCacher: CachedResponseHandler {
     public func dataTask(_ task: URLSessionDataTask,
                          willCacheResponse response: CachedURLResponse,
-                         completion: @escaping (CachedURLResponse?) -> Void) {
+                         completion: @escaping (CachedURLResponse?) -> sending Void) {
         switch behavior {
         case .cache:
             completion(response)
@@ -101,7 +101,7 @@ extension CachedResponseHandler where Self == ResponseCacher {
     ///
     /// - Parameter closure: Closure used to modify the `CachedURLResponse`.
     /// - Returns:           The `ResponseCacher`.
-    public static func modify(using closure: @escaping (@Sendable (URLSessionDataTask, CachedURLResponse) -> CachedURLResponse?)) -> ResponseCacher {
+    public static func modify(using closure: @escaping ( (URLSessionDataTask, CachedURLResponse) -> sending CachedURLResponse?)) -> ResponseCacher {
         ResponseCacher(behavior: .modify(closure))
     }
 }

@@ -61,7 +61,7 @@ public final class URLEncodedFormEncoder {
         /// Brackets containing the item index are appended. This matches the jQuery and Node.js behavior.
         case indexInBrackets
         /// Provide a custom array key encoding with the given closure.
-        case custom((_ key: String, _ index: Int) -> String)
+        case custom((_ key: String, _ index: Int) -> sending String)
 
         /// Encodes the key according to the encoding.
         ///
@@ -70,7 +70,7 @@ public final class URLEncodedFormEncoder {
         ///     - index: When this enum instance is `.indexInBrackets`, the `index` to encode.
         ///
         /// - Returns:   The encoded key.
-        func encode(_ key: String, atIndex index: Int) -> String {
+        func encode(_ key: String, atIndex index: Int) -> sending String {
             switch self {
             case .brackets: "\(key)[]"
             case .noBrackets: key
@@ -92,7 +92,7 @@ public final class URLEncodedFormEncoder {
         /// - Parameter value: The `Bool` to encode.
         ///
         /// - Returns:         The encoded `String`.
-        func encode(_ value: Bool) -> String {
+        func encode(_ value: Bool) -> sending String {
             switch self {
             case .numeric: value ? "1" : "0"
             case .literal: value ? "true" : "false"
@@ -107,7 +107,7 @@ public final class URLEncodedFormEncoder {
         /// Encodes `Data` as a Base64-encoded string. This is the default encoding.
         case base64
         /// Encode the `Data` as a custom value encoded by the given closure.
-        case custom((Data) throws -> String)
+        case custom((Data) throws -> sending String)
 
         /// Encodes `Data` according to the encoding.
         ///
@@ -115,7 +115,7 @@ public final class URLEncodedFormEncoder {
         ///
         /// - Returns:        The encoded `String`, or `nil` if the `Data` should be encoded according to its
         ///                   `Encodable` implementation.
-        func encode(_ data: Data) throws -> String? {
+        func encode(_ data: Data) throws -> sending String? {
             switch self {
             case .deferredToData: nil
             case .base64: data.base64EncodedString()
@@ -144,7 +144,7 @@ public final class URLEncodedFormEncoder {
         /// Encodes `Date`s using the given `DateFormatter`.
         case formatted(DateFormatter)
         /// Encodes `Date`s using the given closure.
-        case custom((Date) throws -> String)
+        case custom((Date) throws -> sending String)
 
         /// Encodes the date according to the encoding.
         ///
@@ -152,7 +152,7 @@ public final class URLEncodedFormEncoder {
         ///
         /// - Returns:        The encoded `String`, or `nil` if the `Date` should be encoded according to its
         ///                   `Encodable` implementation.
-        func encode(_ date: Date) throws -> String? {
+        func encode(_ date: Date) throws -> sending String? {
             switch self {
             case .deferredToDate:
                 nil
@@ -209,9 +209,9 @@ public final class URLEncodedFormEncoder {
         /// For example `oneTwoThree` becomes  `onetwothree`.
         case lowercased
         /// A custom encoding using the provided closure.
-        case custom((String) -> String)
+        case custom((String) -> sending String)
 
-        func encode(_ key: String) -> String {
+        func encode(_ key: String) -> sending String {
             switch self {
             case .useDefaultKeys: key
             case .convertToSnakeCase: convertToSnakeCase(key)
@@ -223,15 +223,15 @@ public final class URLEncodedFormEncoder {
             }
         }
 
-        private func convertToSnakeCase(_ key: String) -> String {
+        private func convertToSnakeCase(_ key: String) -> sending String {
             convert(key, usingSeparator: "_")
         }
 
-        private func convertToKebabCase(_ key: String) -> String {
+        private func convertToKebabCase(_ key: String) -> sending String {
             convert(key, usingSeparator: "-")
         }
 
-        private func convert(_ key: String, usingSeparator separator: String) -> String {
+        private func convert(_ key: String, usingSeparator separator: String) -> sending String {
             guard !key.isEmpty else { return key }
 
             var words: [Range<String.Index>] = []
@@ -301,16 +301,16 @@ public final class URLEncodedFormEncoder {
         /// Encodes key paths by separating each component with dots. e.g. `parent.child.grandchild`.
         public static let dots = KeyPathEncoding { ".\($0)" }
 
-        private let encoding: @Sendable (_ subkey: String) -> String
+        private let encoding: (_ subkey: String) -> sending String
 
         /// Creates an instance with the encoding closure called for each sub-key in a key path.
         ///
         /// - Parameter encoding: Closure used to perform the encoding.
-        public init(encoding: @escaping @Sendable (_ subkey: String) -> String) {
+        public init(encoding: @escaping  (_ subkey: String) -> sending String) {
             self.encoding = encoding
         }
 
-        func encodeKeyPath(_ keyPath: String) -> String {
+        func encodeKeyPath(_ keyPath: String) -> sending String {
             encoding(keyPath)
         }
     }
@@ -324,16 +324,16 @@ public final class URLEncodedFormEncoder {
         /// Encodes `nil` as `null`.
         public static let null = NilEncoding { "null" }
 
-        private let encoding: @Sendable () -> String?
+        private let encoding: () -> sending String?
 
         /// Creates an instance with the encoding closure called for `nil` values.
         ///
         /// - Parameter encoding: Closure used to perform the encoding.
-        public init(encoding: @escaping @Sendable () -> String?) {
+        public init(encoding: @escaping  () -> sending String?) {
             self.encoding = encoding
         }
 
-        func encodeNil() -> String? {
+        func encodeNil() -> sending String? {
             encoding()
         }
     }
@@ -350,7 +350,7 @@ public final class URLEncodedFormEncoder {
         /// - Parameter string: The `String` to encode.
         ///
         /// - Returns:          The encoded `String`.
-        func encode(_ string: String) -> String {
+        func encode(_ string: String) -> sending String {
             switch self {
             case .percentEscaped: string.replacingOccurrences(of: " ", with: "%20")
             case .plusReplaced: string.replacingOccurrences(of: " ", with: "+")
@@ -431,7 +431,7 @@ public final class URLEncodedFormEncoder {
         self.allowedCharacters = allowedCharacters
     }
 
-    func encode(_ value: any Encodable) throws -> URLEncodedFormComponent {
+    func encode(_ value: any Encodable) throws -> sending URLEncodedFormComponent {
         let context = URLEncodedFormContext(.object([]))
         let encoder = _URLEncodedFormEncoder(context: context,
                                              boolEncoding: boolEncoding,
@@ -449,7 +449,7 @@ public final class URLEncodedFormEncoder {
     ///
     /// - Returns:         The encoded `String`.
     /// - Throws:          An `Error` or `EncodingError` instance if encoding fails.
-    public func encode(_ value: any Encodable) throws -> String {
+    public func encode(_ value: any Encodable) throws -> sending String {
         let component: URLEncodedFormComponent = try encode(value)
 
         guard case let .object(object) = component else {
@@ -475,7 +475,7 @@ public final class URLEncodedFormEncoder {
     /// - Returns:         The encoded `Data`.
     ///
     /// - Throws:          An `Error` or `EncodingError` instance if encoding fails.
-    public func encode(_ value: any Encodable) throws -> Data {
+    public func encode(_ value: any Encodable) throws -> sending Data {
         let string: String = try encode(value)
 
         return Data(string.utf8)
@@ -510,7 +510,7 @@ final class _URLEncodedFormEncoder {
 }
 
 extension _URLEncodedFormEncoder: Encoder {
-    func container<Key>(keyedBy type: Key.Type) -> KeyedEncodingContainer<Key> where Key: CodingKey {
+    func container<Key>(keyedBy type: Key.Type) -> sending KeyedEncodingContainer<Key> where Key: CodingKey {
         let container = _URLEncodedFormEncoder.KeyedContainer<Key>(context: context,
                                                                    codingPath: codingPath,
                                                                    boolEncoding: boolEncoding,
@@ -520,7 +520,7 @@ extension _URLEncodedFormEncoder: Encoder {
         return KeyedEncodingContainer(container)
     }
 
-    func unkeyedContainer() -> any UnkeyedEncodingContainer {
+    func unkeyedContainer() -> sending any UnkeyedEncodingContainer {
         _URLEncodedFormEncoder.UnkeyedContainer(context: context,
                                                 codingPath: codingPath,
                                                 boolEncoding: boolEncoding,
@@ -529,7 +529,7 @@ extension _URLEncodedFormEncoder: Encoder {
                                                 nilEncoding: nilEncoding)
     }
 
-    func singleValueContainer() -> any SingleValueEncodingContainer {
+    func singleValueContainer() -> sending any SingleValueEncodingContainer {
         _URLEncodedFormEncoder.SingleValueContainer(context: context,
                                                     codingPath: codingPath,
                                                     boolEncoding: boolEncoding,
@@ -682,7 +682,7 @@ extension _URLEncodedFormEncoder {
             self.nilEncoding = nilEncoding
         }
 
-        private func nestedCodingPath(for key: any CodingKey) -> [any CodingKey] {
+        private func nestedCodingPath(for key: any CodingKey) -> sending [any CodingKey] {
             codingPath + [key]
         }
     }
@@ -768,7 +768,7 @@ extension _URLEncodedFormEncoder.KeyedContainer: KeyedEncodingContainerProtocol 
         try container.encode(value)
     }
 
-    func nestedSingleValueEncoder(for key: Key) -> any SingleValueEncodingContainer {
+    func nestedSingleValueEncoder(for key: Key) -> sending any SingleValueEncodingContainer {
         let container = _URLEncodedFormEncoder.SingleValueContainer(context: context,
                                                                     codingPath: nestedCodingPath(for: key),
                                                                     boolEncoding: boolEncoding,
@@ -779,7 +779,7 @@ extension _URLEncodedFormEncoder.KeyedContainer: KeyedEncodingContainerProtocol 
         return container
     }
 
-    func nestedUnkeyedContainer(forKey key: Key) -> any UnkeyedEncodingContainer {
+    func nestedUnkeyedContainer(forKey key: Key) -> sending any UnkeyedEncodingContainer {
         let container = _URLEncodedFormEncoder.UnkeyedContainer(context: context,
                                                                 codingPath: nestedCodingPath(for: key),
                                                                 boolEncoding: boolEncoding,
@@ -790,7 +790,7 @@ extension _URLEncodedFormEncoder.KeyedContainer: KeyedEncodingContainerProtocol 
         return container
     }
 
-    func nestedContainer<NestedKey>(keyedBy keyType: NestedKey.Type, forKey key: Key) -> KeyedEncodingContainer<NestedKey> where NestedKey: CodingKey {
+    func nestedContainer<NestedKey>(keyedBy keyType: NestedKey.Type, forKey key: Key) -> sending KeyedEncodingContainer<NestedKey> where NestedKey: CodingKey {
         let container = _URLEncodedFormEncoder.KeyedContainer<NestedKey>(context: context,
                                                                          codingPath: nestedCodingPath(for: key),
                                                                          boolEncoding: boolEncoding,
@@ -801,7 +801,7 @@ extension _URLEncodedFormEncoder.KeyedContainer: KeyedEncodingContainerProtocol 
         return KeyedEncodingContainer(container)
     }
 
-    func superEncoder() -> any Encoder {
+    func superEncoder() -> sending any Encoder {
         _URLEncodedFormEncoder(context: context,
                                codingPath: codingPath,
                                boolEncoding: boolEncoding,
@@ -810,7 +810,7 @@ extension _URLEncodedFormEncoder.KeyedContainer: KeyedEncodingContainerProtocol 
                                nilEncoding: nilEncoding)
     }
 
-    func superEncoder(forKey key: Key) -> any Encoder {
+    func superEncoder(forKey key: Key) -> sending any Encoder {
         _URLEncodedFormEncoder(context: context,
                                codingPath: nestedCodingPath(for: key),
                                boolEncoding: boolEncoding,
@@ -1007,7 +1007,7 @@ extension _URLEncodedFormEncoder.UnkeyedContainer: UnkeyedEncodingContainer {
         try container.encode(value)
     }
 
-    func nestedSingleValueContainer() -> any SingleValueEncodingContainer {
+    func nestedSingleValueContainer() -> sending any SingleValueEncodingContainer {
         defer { count += 1 }
 
         return _URLEncodedFormEncoder.SingleValueContainer(context: context,
@@ -1018,7 +1018,7 @@ extension _URLEncodedFormEncoder.UnkeyedContainer: UnkeyedEncodingContainer {
                                                            nilEncoding: nilEncoding)
     }
 
-    func nestedContainer<NestedKey>(keyedBy keyType: NestedKey.Type) -> KeyedEncodingContainer<NestedKey> where NestedKey: CodingKey {
+    func nestedContainer<NestedKey>(keyedBy keyType: NestedKey.Type) -> sending KeyedEncodingContainer<NestedKey> where NestedKey: CodingKey {
         defer { count += 1 }
         let container = _URLEncodedFormEncoder.KeyedContainer<NestedKey>(context: context,
                                                                          codingPath: nestedCodingPath,
@@ -1030,7 +1030,7 @@ extension _URLEncodedFormEncoder.UnkeyedContainer: UnkeyedEncodingContainer {
         return KeyedEncodingContainer(container)
     }
 
-    func nestedUnkeyedContainer() -> any UnkeyedEncodingContainer {
+    func nestedUnkeyedContainer() -> sending any UnkeyedEncodingContainer {
         defer { count += 1 }
 
         return _URLEncodedFormEncoder.UnkeyedContainer(context: context,
@@ -1041,7 +1041,7 @@ extension _URLEncodedFormEncoder.UnkeyedContainer: UnkeyedEncodingContainer {
                                                        nilEncoding: nilEncoding)
     }
 
-    func superEncoder() -> any Encoder {
+    func superEncoder() -> sending any Encoder {
         defer { count += 1 }
 
         return _URLEncodedFormEncoder(context: context,
@@ -1075,7 +1075,7 @@ final class URLEncodedFormSerializer {
         self.allowedCharacters = allowedCharacters
     }
 
-    func serialize(_ object: URLEncodedFormComponent.Object) -> String {
+    func serialize(_ object: URLEncodedFormComponent.Object) -> sending String {
         var output: [String] = []
         for (key, component) in object {
             let value = serialize(component, forKey: key)
@@ -1086,7 +1086,7 @@ final class URLEncodedFormSerializer {
         return output.joinedWithAmpersands()
     }
 
-    func serialize(_ component: URLEncodedFormComponent, forKey key: String) -> String {
+    func serialize(_ component: URLEncodedFormComponent, forKey key: String) -> sending String {
         switch component {
         case let .string(string): "\(escape(keyEncoding.encode(key)))=\(escape(string))"
         case let .array(array): serialize(array, forKey: key)
@@ -1094,7 +1094,7 @@ final class URLEncodedFormSerializer {
         }
     }
 
-    func serialize(_ object: URLEncodedFormComponent.Object, forKey key: String) -> String {
+    func serialize(_ object: URLEncodedFormComponent.Object, forKey key: String) -> sending String {
         var segments: [String] = object.map { subKey, value in
             let keyPath = keyPathEncoding.encodeKeyPath(subKey)
             return serialize(value, forKey: key + keyPath)
@@ -1104,7 +1104,7 @@ final class URLEncodedFormSerializer {
         return segments.joinedWithAmpersands()
     }
 
-    func serialize(_ array: [URLEncodedFormComponent], forKey key: String) -> String {
+    func serialize(_ array: [URLEncodedFormComponent], forKey key: String) -> sending String {
         var segments: [String] = array.enumerated().map { index, component in
             let keyPath = arrayEncoding.encode(key, atIndex: index)
             return serialize(component, forKey: keyPath)
@@ -1114,7 +1114,7 @@ final class URLEncodedFormSerializer {
         return segments.joinedWithAmpersands()
     }
 
-    func escape(_ query: String) -> String {
+    func escape(_ query: String) -> sending String {
         var allowedCharactersWithSpace = allowedCharacters
         allowedCharactersWithSpace.insert(charactersIn: " ")
         let escapedQuery = query.addingPercentEncoding(withAllowedCharacters: allowedCharactersWithSpace) ?? query
@@ -1125,7 +1125,7 @@ final class URLEncodedFormSerializer {
 }
 
 extension [String] {
-    func joinedWithAmpersands() -> String {
+    func joinedWithAmpersands() -> sending String {
         joined(separator: "&")
     }
 }

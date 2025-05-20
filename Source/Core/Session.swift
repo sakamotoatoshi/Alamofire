@@ -72,7 +72,7 @@ open class Session: @unchecked Sendable {
     /// `Set` of currently active `Request`s.
     var activeRequests: Set<Request> = []
     /// Completion events awaiting `URLSessionTaskMetrics`.
-    var waitingCompletions: [URLSessionTask: () -> Void] = [:]
+    var waitingCompletions: [URLSessionTask:() -> sending Void] = [:]
 
     /// Creates a `Session` from a `URLSession` and other parameters.
     ///
@@ -217,7 +217,7 @@ open class Session: @unchecked Sendable {
     ///
     /// - Parameters:
     ///   - action:     Closure to perform with all `Request`s.
-    public func withAllRequests(perform action: @escaping @Sendable (Set<Request>) -> Void) {
+    public func withAllRequests(perform action: @escaping  (Set<Request>) -> sending Void) {
         rootQueue.async {
             action(self.activeRequests)
         }
@@ -232,7 +232,7 @@ open class Session: @unchecked Sendable {
     /// - Parameters:
     ///   - queue:      `DispatchQueue` on which the completion handler is run. `.main` by default.
     ///   - completion: Closure to be called when all `Request`s have been cancelled.
-    public func cancelAllRequests(completingOnQueue queue: DispatchQueue = .main, completion: (@Sendable () -> Void)? = nil) {
+    public func cancelAllRequests(completingOnQueue queue: DispatchQueue = .main, completion: ( () -> sending Void)? = nil) {
         withAllRequests { requests in
             requests.forEach { $0.cancel() }
             queue.async {
@@ -244,7 +244,7 @@ open class Session: @unchecked Sendable {
     // MARK: - DataRequest
 
     /// Closure which provides a `URLRequest` for mutation.
-    public typealias RequestModifier = @Sendable (inout URLRequest) throws -> Void
+    public typealias RequestModifier = (inout URLRequest) throws -> sending Void
 
     struct RequestConvertible: URLRequestConvertible {
         let url: any URLConvertible
@@ -254,7 +254,7 @@ open class Session: @unchecked Sendable {
         let headers: HTTPHeaders?
         let requestModifier: RequestModifier?
 
-        func asURLRequest() throws -> URLRequest {
+        func asURLRequest() throws -> sending URLRequest {
             var request = try URLRequest(url: url, method: method, headers: headers)
             try requestModifier?(&request)
 
@@ -302,7 +302,7 @@ open class Session: @unchecked Sendable {
         let headers: HTTPHeaders?
         let requestModifier: RequestModifier?
 
-        func asURLRequest() throws -> URLRequest {
+        func asURLRequest() throws -> sending URLRequest {
             var request = try URLRequest(url: url, method: method, headers: headers)
             try requestModifier?(&request)
 
@@ -667,7 +667,7 @@ open class Session: @unchecked Sendable {
         let headers: HTTPHeaders?
         let requestModifier: RequestModifier?
 
-        func asURLRequest() throws -> URLRequest {
+        func asURLRequest() throws -> sending URLRequest {
             var request = try URLRequest(url: url, method: method, headers: headers)
             try requestModifier?(&request)
 
@@ -679,11 +679,11 @@ open class Session: @unchecked Sendable {
         let request: any URLRequestConvertible
         let uploadable: any UploadableConvertible
 
-        func createUploadable() throws -> UploadRequest.Uploadable {
+        func createUploadable() throws -> sending UploadRequest.Uploadable {
             try uploadable.createUploadable()
         }
 
-        func asURLRequest() throws -> URLRequest {
+        func asURLRequest() throws -> sending URLRequest {
             try request.asURLRequest()
         }
     }
@@ -869,7 +869,7 @@ open class Session: @unchecked Sendable {
     ///                              provided parameters. `nil` by default.
     ///
     /// - Returns:                   The created `UploadRequest`.
-    open func upload(multipartFormData: @escaping (MultipartFormData) -> Void,
+    open func upload(multipartFormData: @escaping (MultipartFormData) -> sending Void,
                      to url: any URLConvertible,
                      usingThreshold encodingMemoryThreshold: UInt64 = MultipartFormData.encodingMemoryThreshold,
                      method: HTTPMethod = .post,
@@ -919,7 +919,7 @@ open class Session: @unchecked Sendable {
     ///                              written to disk before being uploaded. `.default` instance by default.
     ///
     /// - Returns:                   The created `UploadRequest`.
-    open func upload(multipartFormData: @escaping (MultipartFormData) -> Void,
+    open func upload(multipartFormData: @escaping (MultipartFormData) -> sending Void,
                      with request: any URLRequestConvertible,
                      usingThreshold encodingMemoryThreshold: UInt64 = MultipartFormData.encodingMemoryThreshold,
                      interceptor: (any RequestInterceptor)? = nil,
@@ -1134,7 +1134,7 @@ open class Session: @unchecked Sendable {
 
     func performSetupOperations(for request: Request,
                                 convertible: any URLRequestConvertible,
-                                shouldCreateTask: @escaping @Sendable () -> Bool = { true }) {
+                                shouldCreateTask: @escaping  () -> sending Bool = { true }) {
         dispatchPrecondition(condition: .onQueue(requestQueue))
 
         let initialRequest: URLRequest
@@ -1228,7 +1228,7 @@ open class Session: @unchecked Sendable {
 
     // MARK: - Adapters and Retriers
 
-    func adapter(for request: Request) -> (any RequestAdapter)? {
+    func adapter(for request: Request) -> sending (any RequestAdapter)? {
         if let requestInterceptor = request.interceptor, let sessionInterceptor = interceptor {
             Interceptor(adapters: [requestInterceptor, sessionInterceptor])
         } else {
@@ -1236,7 +1236,7 @@ open class Session: @unchecked Sendable {
         }
     }
 
-    func retrier(for request: Request) -> (any RequestRetrier)? {
+    func retrier(for request: Request) -> sending (any RequestRetrier)? {
         if let requestInterceptor = request.interceptor, let sessionInterceptor = interceptor {
             Interceptor(retriers: [requestInterceptor, sessionInterceptor])
         } else {
@@ -1268,7 +1268,7 @@ extension Session: RequestDelegate {
         activeRequests.remove(request)
     }
 
-    public func retryResult(for request: Request, dueTo error: AFError, completion: @escaping @Sendable (RetryResult) -> Void) {
+    public func retryResult(for request: Request, dueTo error: AFError, completion: @escaping  (RetryResult) -> sending Void) {
         guard let retrier = retrier(for: request) else {
             rootQueue.async { completion(.doNotRetry) }
             return
@@ -1286,7 +1286,7 @@ extension Session: RequestDelegate {
 
     public func retryRequest(_ request: Request, withDelay timeDelay: TimeInterval?) {
         rootQueue.async {
-            let retry: @Sendable () -> Void = {
+            let retry: () -> sending Void = {
                 guard !request.isCancelled else { return }
 
                 request.prepareForRetry()
@@ -1305,7 +1305,7 @@ extension Session: RequestDelegate {
 // MARK: - SessionStateProvider
 
 extension Session: SessionStateProvider {
-    func request(for task: URLSessionTask) -> Request? {
+    func request(for task: URLSessionTask) -> sending Request? {
         dispatchPrecondition(condition: .onQueue(rootQueue))
 
         return requestTaskMap[task]
@@ -1322,7 +1322,7 @@ extension Session: SessionStateProvider {
         }
     }
 
-    func didCompleteTask(_ task: URLSessionTask, completion: @escaping () -> Void) {
+    func didCompleteTask(_ task: URLSessionTask, completion: @escaping () -> sending Void) {
         dispatchPrecondition(condition: .onQueue(rootQueue))
 
         let didDisassociate = requestTaskMap.disassociateIfNecessaryAfterCompletingTask(task)
@@ -1334,7 +1334,7 @@ extension Session: SessionStateProvider {
         }
     }
 
-    func credential(for task: URLSessionTask, in protectionSpace: URLProtectionSpace) -> URLCredential? {
+    func credential(for task: URLSessionTask, in protectionSpace: URLProtectionSpace) -> sending URLCredential? {
         dispatchPrecondition(condition: .onQueue(rootQueue))
 
         return requestTaskMap[task]?.credential ??

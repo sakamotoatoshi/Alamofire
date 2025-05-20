@@ -44,7 +44,7 @@ open class SessionDelegate: NSObject, @unchecked Sendable {
     /// - Parameters:
     ///   - task: The `URLSessionTask` for which to find the associated `Request`.
     ///   - type: The `Request` subclass type to cast any `Request` associate with `task`.
-    func request<R: Request>(for task: URLSessionTask, as type: R.Type) -> R? {
+    func request<R: Request>(for task: URLSessionTask, as type: R.Type) -> sending R? {
         guard let provider = stateProvider else {
             assertionFailure("StateProvider is nil for task \(task.taskIdentifier).")
             return nil
@@ -60,10 +60,10 @@ protocol SessionStateProvider: AnyObject, Sendable {
     var redirectHandler: (any RedirectHandler)? { get }
     var cachedResponseHandler: (any CachedResponseHandler)? { get }
 
-    func request(for task: URLSessionTask) -> Request?
+    func request(for task: URLSessionTask) -> sending Request?
     func didGatherMetricsForTask(_ task: URLSessionTask)
-    func didCompleteTask(_ task: URLSessionTask, completion: @escaping () -> Void)
-    func credential(for task: URLSessionTask, in protectionSpace: URLProtectionSpace) -> URLCredential?
+    func didCompleteTask(_ task: URLSessionTask, completion: @escaping () -> sending Void)
+    func credential(for task: URLSessionTask, in protectionSpace: URLProtectionSpace) -> sending URLCredential?
     func cancelRequestsForSessionInvalidation(with error: (any Error)?)
 }
 
@@ -86,7 +86,7 @@ extension SessionDelegate: URLSessionTaskDelegate {
     open func urlSession(_ session: URLSession,
                          task: URLSessionTask,
                          didReceive challenge: URLAuthenticationChallenge,
-                         completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+                         completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> sending Void) {
         eventMonitor?.urlSession(session, task: task, didReceive: challenge)
 
         let evaluation: ChallengeEvaluation
@@ -117,7 +117,7 @@ extension SessionDelegate: URLSessionTaskDelegate {
     /// - Parameter challenge: The `URLAuthenticationChallenge`.
     ///
     /// - Returns:             The `ChallengeEvaluation`.
-    func attemptServerTrustAuthentication(with challenge: URLAuthenticationChallenge) -> ChallengeEvaluation {
+    func attemptServerTrustAuthentication(with challenge: URLAuthenticationChallenge) -> sending ChallengeEvaluation {
         let host = challenge.protectionSpace.host
 
         guard challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
@@ -148,7 +148,7 @@ extension SessionDelegate: URLSessionTaskDelegate {
     ///
     /// - Returns:     The `ChallengeEvaluation`.
     func attemptCredentialAuthentication(for challenge: URLAuthenticationChallenge,
-                                         belongingTo task: URLSessionTask) -> ChallengeEvaluation {
+                                         belongingTo task: URLSessionTask) -> sending ChallengeEvaluation {
         guard challenge.previousFailureCount == 0 else {
             return (.rejectProtectionSpace, nil, nil)
         }
@@ -177,7 +177,7 @@ extension SessionDelegate: URLSessionTaskDelegate {
 
     open func urlSession(_ session: URLSession,
                          task: URLSessionTask,
-                         needNewBodyStream completionHandler: @escaping (InputStream?) -> Void) {
+                         needNewBodyStream completionHandler: @escaping (InputStream?) -> sending Void) {
         eventMonitor?.urlSession(session, taskNeedsNewBodyStream: task)
 
         guard let request = request(for: task, as: UploadRequest.self) else {
@@ -193,7 +193,7 @@ extension SessionDelegate: URLSessionTaskDelegate {
                          task: URLSessionTask,
                          willPerformHTTPRedirection response: HTTPURLResponse,
                          newRequest request: URLRequest,
-                         completionHandler: @escaping (URLRequest?) -> Void) {
+                         completionHandler: @escaping (URLRequest?) -> sending Void) {
         eventMonitor?.urlSession(session, task: task, willPerformHTTPRedirection: response, newRequest: request)
 
         if let redirectHandler = stateProvider?.request(for: task)?.redirectHandler ?? stateProvider?.redirectHandler {
@@ -234,7 +234,7 @@ extension SessionDelegate: URLSessionDataDelegate {
     open func urlSession(_ session: URLSession,
                          dataTask: URLSessionDataTask,
                          didReceive response: URLResponse,
-                         completionHandler: @escaping @Sendable (URLSession.ResponseDisposition) -> Void) {
+                         completionHandler: @escaping  (URLSession.ResponseDisposition) -> sending Void) {
         eventMonitor?.urlSession(session, dataTask: dataTask, didReceive: response)
 
         guard let response = response as? HTTPURLResponse else { completionHandler(.allow); return }
@@ -266,7 +266,7 @@ extension SessionDelegate: URLSessionDataDelegate {
     open func urlSession(_ session: URLSession,
                          dataTask: URLSessionDataTask,
                          willCacheResponse proposedResponse: CachedURLResponse,
-                         completionHandler: @escaping (CachedURLResponse?) -> Void) {
+                         completionHandler: @escaping (CachedURLResponse?) -> sending Void) {
         eventMonitor?.urlSession(session, dataTask: dataTask, willCacheResponse: proposedResponse)
 
         if let handler = stateProvider?.request(for: dataTask)?.cachedResponseHandler ?? stateProvider?.cachedResponseHandler {

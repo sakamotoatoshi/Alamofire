@@ -321,7 +321,7 @@ public final class CompositeEventMonitor: EventMonitor {
         self.monitors = Protected(monitors)
     }
 
-    func performEvent(_ event: @escaping @Sendable (any EventMonitor) -> Void) {
+    func performEvent(_ event: @escaping  (any EventMonitor) -> sending Void) {
         queue.async {
             self.monitors.read { monitors in
                 for monitor in monitors {
@@ -583,127 +583,127 @@ open class ClosureEventMonitor: EventMonitor, @unchecked Sendable {
     open var sessionDidBecomeInvalidWithError: ((URLSession, (any Error)?) -> Void)?
 
     /// Closure called on the `urlSession(_:task:didReceive:completionHandler:)`.
-    open var taskDidReceiveChallenge: ((URLSession, URLSessionTask, URLAuthenticationChallenge) -> Void)?
+    open var taskDidReceiveChallenge:((URLSession, URLSessionTask, URLAuthenticationChallenge) -> sending Void)?
 
     /// Closure that receives `urlSession(_:task:didSendBodyData:totalBytesSent:totalBytesExpectedToSend:)` event.
-    open var taskDidSendBodyData: ((URLSession, URLSessionTask, Int64, Int64, Int64) -> Void)?
+    open var taskDidSendBodyData:((URLSession, URLSessionTask, Int64, Int64, Int64) -> sending Void)?
 
     /// Closure called on the `urlSession(_:task:needNewBodyStream:)` event.
-    open var taskNeedNewBodyStream: ((URLSession, URLSessionTask) -> Void)?
+    open var taskNeedNewBodyStream:((URLSession, URLSessionTask) -> sending Void)?
 
     /// Closure called on the `urlSession(_:task:willPerformHTTPRedirection:newRequest:completionHandler:)` event.
-    open var taskWillPerformHTTPRedirection: ((URLSession, URLSessionTask, HTTPURLResponse, URLRequest) -> Void)?
+    open var taskWillPerformHTTPRedirection:((URLSession, URLSessionTask, HTTPURLResponse, URLRequest) -> sending Void)?
 
     /// Closure called on the `urlSession(_:task:didFinishCollecting:)` event.
-    open var taskDidFinishCollectingMetrics: ((URLSession, URLSessionTask, URLSessionTaskMetrics) -> Void)?
+    open var taskDidFinishCollectingMetrics:((URLSession, URLSessionTask, URLSessionTaskMetrics) -> sending Void)?
 
     /// Closure called on the `urlSession(_:task:didCompleteWithError:)` event.
     open var taskDidComplete: ((URLSession, URLSessionTask, (any Error)?) -> Void)?
 
     /// Closure called on the `urlSession(_:taskIsWaitingForConnectivity:)` event.
-    open var taskIsWaitingForConnectivity: ((URLSession, URLSessionTask) -> Void)?
+    open var taskIsWaitingForConnectivity:((URLSession, URLSessionTask) -> sending Void)?
 
     /// Closure called on the `urlSession(_:dataTask:didReceive:completionHandler:)` event.
-    open var dataTaskDidReceiveResponse: ((URLSession, URLSessionDataTask, URLResponse) -> Void)?
+    open var dataTaskDidReceiveResponse:((URLSession, URLSessionDataTask, URLResponse) -> sending Void)?
 
     /// Closure that receives the `urlSession(_:dataTask:didReceive:)` event.
-    open var dataTaskDidReceiveData: ((URLSession, URLSessionDataTask, Data) -> Void)?
+    open var dataTaskDidReceiveData:((URLSession, URLSessionDataTask, Data) -> sending Void)?
 
     /// Closure called on the `urlSession(_:dataTask:willCacheResponse:completionHandler:)` event.
-    open var dataTaskWillCacheResponse: ((URLSession, URLSessionDataTask, CachedURLResponse) -> Void)?
+    open var dataTaskWillCacheResponse:((URLSession, URLSessionDataTask, CachedURLResponse) -> sending Void)?
 
     /// Closure called on the `urlSession(_:downloadTask:didFinishDownloadingTo:)` event.
-    open var downloadTaskDidFinishDownloadingToURL: ((URLSession, URLSessionDownloadTask, URL) -> Void)?
+    open var downloadTaskDidFinishDownloadingToURL:((URLSession, URLSessionDownloadTask, URL) -> sending Void)?
 
     /// Closure called on the `urlSession(_:downloadTask:didWriteData:totalBytesWritten:totalBytesExpectedToWrite:)`
     /// event.
-    open var downloadTaskDidWriteData: ((URLSession, URLSessionDownloadTask, Int64, Int64, Int64) -> Void)?
+    open var downloadTaskDidWriteData:((URLSession, URLSessionDownloadTask, Int64, Int64, Int64) -> sending Void)?
 
     /// Closure called on the `urlSession(_:downloadTask:didResumeAtOffset:expectedTotalBytes:)` event.
-    open var downloadTaskDidResumeAtOffset: ((URLSession, URLSessionDownloadTask, Int64, Int64) -> Void)?
+    open var downloadTaskDidResumeAtOffset:((URLSession, URLSessionDownloadTask, Int64, Int64) -> sending Void)?
 
     // MARK: - Request Events
 
     /// Closure called on the `request(_:didCreateInitialURLRequest:)` event.
-    open var requestDidCreateInitialURLRequest: ((Request, URLRequest) -> Void)?
+    open var requestDidCreateInitialURLRequest:((Request, URLRequest) -> sending Void)?
 
     /// Closure called on the `request(_:didFailToCreateURLRequestWithError:)` event.
-    open var requestDidFailToCreateURLRequestWithError: ((Request, AFError) -> Void)?
+    open var requestDidFailToCreateURLRequestWithError:((Request, AFError) -> sending Void)?
 
     /// Closure called on the `request(_:didAdaptInitialRequest:to:)` event.
-    open var requestDidAdaptInitialRequestToAdaptedRequest: ((Request, URLRequest, URLRequest) -> Void)?
+    open var requestDidAdaptInitialRequestToAdaptedRequest:((Request, URLRequest, URLRequest) -> sending Void)?
 
     /// Closure called on the `request(_:didFailToAdaptURLRequest:withError:)` event.
-    open var requestDidFailToAdaptURLRequestWithError: ((Request, URLRequest, AFError) -> Void)?
+    open var requestDidFailToAdaptURLRequestWithError:((Request, URLRequest, AFError) -> sending Void)?
 
     /// Closure called on the `request(_:didCreateURLRequest:)` event.
-    open var requestDidCreateURLRequest: ((Request, URLRequest) -> Void)?
+    open var requestDidCreateURLRequest:((Request, URLRequest) -> sending Void)?
 
     /// Closure called on the `request(_:didCreateTask:)` event.
-    open var requestDidCreateTask: ((Request, URLSessionTask) -> Void)?
+    open var requestDidCreateTask:((Request, URLSessionTask) -> sending Void)?
 
     /// Closure called on the `request(_:didGatherMetrics:)` event.
-    open var requestDidGatherMetrics: ((Request, URLSessionTaskMetrics) -> Void)?
+    open var requestDidGatherMetrics:((Request, URLSessionTaskMetrics) -> sending Void)?
 
     /// Closure called on the `request(_:didFailTask:earlyWithError:)` event.
-    open var requestDidFailTaskEarlyWithError: ((Request, URLSessionTask, AFError) -> Void)?
+    open var requestDidFailTaskEarlyWithError:((Request, URLSessionTask, AFError) -> sending Void)?
 
     /// Closure called on the `request(_:didCompleteTask:with:)` event.
-    open var requestDidCompleteTaskWithError: ((Request, URLSessionTask, AFError?) -> Void)?
+    open var requestDidCompleteTaskWithError:((Request, URLSessionTask, AFError?) -> sending Void)?
 
     /// Closure called on the `requestIsRetrying(_:)` event.
-    open var requestIsRetrying: ((Request) -> Void)?
+    open var requestIsRetrying:((Request) -> sending Void)?
 
     /// Closure called on the `requestDidFinish(_:)` event.
-    open var requestDidFinish: ((Request) -> Void)?
+    open var requestDidFinish:((Request) -> sending Void)?
 
     /// Closure called on the `requestDidResume(_:)` event.
-    open var requestDidResume: ((Request) -> Void)?
+    open var requestDidResume:((Request) -> sending Void)?
 
     /// Closure called on the `request(_:didResumeTask:)` event.
-    open var requestDidResumeTask: ((Request, URLSessionTask) -> Void)?
+    open var requestDidResumeTask:((Request, URLSessionTask) -> sending Void)?
 
     /// Closure called on the `requestDidSuspend(_:)` event.
-    open var requestDidSuspend: ((Request) -> Void)?
+    open var requestDidSuspend:((Request) -> sending Void)?
 
     /// Closure called on the `request(_:didSuspendTask:)` event.
-    open var requestDidSuspendTask: ((Request, URLSessionTask) -> Void)?
+    open var requestDidSuspendTask:((Request, URLSessionTask) -> sending Void)?
 
     /// Closure called on the `requestDidCancel(_:)` event.
-    open var requestDidCancel: ((Request) -> Void)?
+    open var requestDidCancel:((Request) -> sending Void)?
 
     /// Closure called on the `request(_:didCancelTask:)` event.
-    open var requestDidCancelTask: ((Request, URLSessionTask) -> Void)?
+    open var requestDidCancelTask:((Request, URLSessionTask) -> sending Void)?
 
     /// Closure called on the `request(_:didValidateRequest:response:data:withResult:)` event.
-    open var requestDidValidateRequestResponseDataWithResult: ((DataRequest, URLRequest?, HTTPURLResponse, Data?, Request.ValidationResult) -> Void)?
+    open var requestDidValidateRequestResponseDataWithResult:((DataRequest, URLRequest?, HTTPURLResponse, Data?, Request.ValidationResult) -> sending Void)?
 
     /// Closure called on the `request(_:didParseResponse:)` event.
-    open var requestDidParseResponse: ((DataRequest, DataResponse<Data?, AFError>) -> Void)?
+    open var requestDidParseResponse:((DataRequest, DataResponse<Data?, AFError>) -> sending Void)?
 
     /// Closure called on the `request(_:didValidateRequest:response:withResult:)` event.
-    open var requestDidValidateRequestResponseWithResult: ((DataStreamRequest, URLRequest?, HTTPURLResponse, Request.ValidationResult) -> Void)?
+    open var requestDidValidateRequestResponseWithResult:((DataStreamRequest, URLRequest?, HTTPURLResponse, Request.ValidationResult) -> sending Void)?
 
     /// Closure called on the `request(_:didCreateUploadable:)` event.
-    open var requestDidCreateUploadable: ((UploadRequest, UploadRequest.Uploadable) -> Void)?
+    open var requestDidCreateUploadable:((UploadRequest, UploadRequest.Uploadable) -> sending Void)?
 
     /// Closure called on the `request(_:didFailToCreateUploadableWithError:)` event.
-    open var requestDidFailToCreateUploadableWithError: ((UploadRequest, AFError) -> Void)?
+    open var requestDidFailToCreateUploadableWithError:((UploadRequest, AFError) -> sending Void)?
 
     /// Closure called on the `request(_:didProvideInputStream:)` event.
-    open var requestDidProvideInputStream: ((UploadRequest, InputStream) -> Void)?
+    open var requestDidProvideInputStream:((UploadRequest, InputStream) -> sending Void)?
 
     /// Closure called on the `request(_:didFinishDownloadingUsing:with:)` event.
-    open var requestDidFinishDownloadingUsingTaskWithResult: ((DownloadRequest, URLSessionTask, Result<URL, AFError>) -> Void)?
+    open var requestDidFinishDownloadingUsingTaskWithResult:((DownloadRequest, URLSessionTask, Result<URL, AFError>) -> sending Void)?
 
     /// Closure called on the `request(_:didCreateDestinationURL:)` event.
-    open var requestDidCreateDestinationURL: ((DownloadRequest, URL) -> Void)?
+    open var requestDidCreateDestinationURL:((DownloadRequest, URL) -> sending Void)?
 
     /// Closure called on the `request(_:didValidateRequest:response:temporaryURL:destinationURL:withResult:)` event.
-    open var requestDidValidateRequestResponseFileURLWithResult: ((DownloadRequest, URLRequest?, HTTPURLResponse, URL?, Request.ValidationResult) -> Void)?
+    open var requestDidValidateRequestResponseFileURLWithResult:((DownloadRequest, URLRequest?, HTTPURLResponse, URL?, Request.ValidationResult) -> sending Void)?
 
     /// Closure called on the `request(_:didParseResponse:)` event.
-    open var requestDidParseDownloadResponse: ((DownloadRequest, DownloadResponse<URL?, AFError>) -> Void)?
+    open var requestDidParseDownloadResponse:((DownloadRequest, DownloadResponse<URL?, AFError>) -> sending Void)?
 
     public let queue: DispatchQueue
 

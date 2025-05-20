@@ -50,8 +50,8 @@ public final class DownloadRequest: Request, @unchecked Sendable {
     ///
     /// - Note: Downloads from a local `file://` `URL`s do not use the `Destination` closure, as those downloads do not
     ///         return an `HTTPURLResponse`. Instead the file is merely moved within the temporary directory.
-    public typealias Destination = @Sendable (_ temporaryURL: URL,
-                                              _ response: HTTPURLResponse) -> (destinationURL: URL, options: Options)
+    public typealias Destination = (_ temporaryURL: URL,
+                                              _ response: HTTPURLResponse) -> sending (destinationURL: URL, options: Options)
 
     /// Creates a download file destination closure which uses the default file manager to move the temporary file to a
     /// file URL in the first available directory with the specified search path directory and search path domain mask.
@@ -64,7 +64,7 @@ public final class DownloadRequest: Request, @unchecked Sendable {
     /// - Returns: The `Destination` closure.
     public class func suggestedDownloadDestination(for directory: FileManager.SearchPathDirectory = .documentDirectory,
                                                    in domain: FileManager.SearchPathDomainMask = .userDomainMask,
-                                                   options: Options = []) -> Destination {
+                                                   options: Options = []) -> sending Destination {
         { temporaryURL, response in
             let directoryURLs = FileManager.default.urls(for: directory, in: domain)
             let url = directoryURLs.first?.appendingPathComponent(response.suggestedFilename!) ?? temporaryURL
@@ -83,7 +83,7 @@ public final class DownloadRequest: Request, @unchecked Sendable {
 
     /// Default `URL` creation closure. Creates a `URL` in the temporary directory with `Alamofire_` prepended to the
     /// provided file name.
-    static let defaultDestinationURL: @Sendable (URL) -> URL = { url in
+    static let defaultDestinationURL: (URL) -> sending URL = { url in
         let filename = "Alamofire_\(url.lastPathComponent)"
         let destination = url.deletingLastPathComponent().appendingPathComponent(filename)
 
@@ -201,7 +201,7 @@ public final class DownloadRequest: Request, @unchecked Sendable {
         downloadProgressHandler?.queue.async { self.downloadProgressHandler?.handler(self.downloadProgress) }
     }
 
-    override func task(for request: URLRequest, using session: URLSession) -> URLSessionTask {
+    override func task(for request: URLRequest, using session: URLSession) -> sending URLSessionTask {
         session.downloadTask(with: request)
     }
 
@@ -212,7 +212,7 @@ public final class DownloadRequest: Request, @unchecked Sendable {
     ///   - session: `URLSession` used to create the `URLSessionTask`.
     ///
     /// - Returns:   The `URLSessionTask` created.
-    public func task(forResumeData data: Data, using session: URLSession) -> URLSessionTask {
+    public func task(forResumeData data: Data, using session: URLSession) -> sending URLSessionTask {
         session.downloadTask(withResumeData: data)
     }
 
@@ -223,7 +223,7 @@ public final class DownloadRequest: Request, @unchecked Sendable {
     ///
     /// - Returns: The instance.
     @discardableResult
-    override public func cancel() -> Self {
+    override public func cancel() -> sending Self {
         cancel(producingResumeData: false)
     }
 
@@ -235,8 +235,8 @@ public final class DownloadRequest: Request, @unchecked Sendable {
     ///
     /// - Returns: The instance.
     @discardableResult
-    public func cancel(producingResumeData shouldProduceResumeData: Bool) -> Self {
-        cancel(optionallyProducingResumeData: shouldProduceResumeData ? { @Sendable _ in } : nil)
+    public func cancel(producingResumeData shouldProduceResumeData: Bool) -> sending Self {
+        cancel(optionallyProducingResumeData: shouldProduceResumeData ? ({ _ in } as (_: Data?) -> sending Void) : nil)
     }
 
     /// Cancels the instance while producing resume data. Once cancelled, a `DownloadRequest` can no longer be resumed
@@ -252,7 +252,7 @@ public final class DownloadRequest: Request, @unchecked Sendable {
     /// - Returns:                     The instance.
     @preconcurrency
     @discardableResult
-    public func cancel(byProducingResumeData completionHandler: @escaping @Sendable (_ data: Data?) -> Void) -> Self {
+    public func cancel(byProducingResumeData completionHandler: @escaping  (_ data: Data?) -> sending Void) -> Self {
         cancel(optionallyProducingResumeData: completionHandler)
     }
 
@@ -262,7 +262,7 @@ public final class DownloadRequest: Request, @unchecked Sendable {
     /// - Parameter completionHandler: Optional resume data handler.
     ///
     /// - Returns:                     The instance.
-    private func cancel(optionallyProducingResumeData completionHandler: (@Sendable (_ resumeData: Data?) -> Void)?) -> Self {
+    private func cancel(optionallyProducingResumeData completionHandler: ( (_ resumeData: Data?) -> sending Void)?) -> Self {
         mutableState.write { mutableState in
             guard mutableState.state.canTransitionTo(.cancelled) else { return }
 
@@ -302,8 +302,8 @@ public final class DownloadRequest: Request, @unchecked Sendable {
     ///
     /// - Returns:              The instance.
     @discardableResult
-    public func validate(_ validation: @escaping Validation) -> Self {
-        let validator: @Sendable () -> Void = { [unowned self] in
+    public func validate(_ validation: @escaping Validation) -> sending Self {
+        let validator: () -> sending Void = { [unowned self] in
             guard error == nil, let response else { return }
 
             let result = validation(request, response, fileURL)
@@ -336,7 +336,7 @@ public final class DownloadRequest: Request, @unchecked Sendable {
     @preconcurrency
     @discardableResult
     public func response(queue: DispatchQueue = .main,
-                         completionHandler: @escaping @Sendable (AFDownloadResponse<URL?>) -> Void)
+                         completionHandler: @escaping  (AFDownloadResponse<URL?>) -> sending Void)
         -> Self {
         appendResponseSerializer {
             // Start work that should be on the serialization queue.
@@ -363,7 +363,7 @@ public final class DownloadRequest: Request, @unchecked Sendable {
 
     private func _response<Serializer: DownloadResponseSerializerProtocol>(queue: DispatchQueue = .main,
                                                                            responseSerializer: Serializer,
-                                                                           completionHandler: @escaping @Sendable (AFDownloadResponse<Serializer.SerializedObject>) -> Void)
+                                                                           completionHandler: @escaping  (AFDownloadResponse<Serializer.SerializedObject>) -> sending Void)
         -> Self {
         appendResponseSerializer {
             // Start work that should be on the serialization queue.
@@ -396,7 +396,7 @@ public final class DownloadRequest: Request, @unchecked Sendable {
                 }
 
                 delegate.retryResult(for: self, dueTo: serializerError) { retryResult in
-                    var didComplete: (@Sendable () -> Void)?
+                    var didComplete:( () -> sending Void)?
 
                     defer {
                         if let didComplete {
@@ -445,7 +445,7 @@ public final class DownloadRequest: Request, @unchecked Sendable {
     @discardableResult
     public func response<Serializer: DownloadResponseSerializerProtocol>(queue: DispatchQueue = .main,
                                                                          responseSerializer: Serializer,
-                                                                         completionHandler: @escaping @Sendable (AFDownloadResponse<Serializer.SerializedObject>) -> Void)
+                                                                         completionHandler: @escaping  (AFDownloadResponse<Serializer.SerializedObject>) -> sending Void)
         -> Self {
         _response(queue: queue, responseSerializer: responseSerializer, completionHandler: completionHandler)
     }
@@ -464,7 +464,7 @@ public final class DownloadRequest: Request, @unchecked Sendable {
     @discardableResult
     public func response<Serializer: ResponseSerializer>(queue: DispatchQueue = .main,
                                                          responseSerializer: Serializer,
-                                                         completionHandler: @escaping @Sendable (AFDownloadResponse<Serializer.SerializedObject>) -> Void)
+                                                         completionHandler: @escaping  (AFDownloadResponse<Serializer.SerializedObject>) -> sending Void)
         -> Self {
         _response(queue: queue, responseSerializer: responseSerializer, completionHandler: completionHandler)
     }
@@ -479,7 +479,7 @@ public final class DownloadRequest: Request, @unchecked Sendable {
     @preconcurrency
     @discardableResult
     public func responseURL(queue: DispatchQueue = .main,
-                            completionHandler: @escaping @Sendable (AFDownloadResponse<URL>) -> Void) -> Self {
+                            completionHandler: @escaping  (AFDownloadResponse<URL>) -> sending Void) -> Self {
         response(queue: queue, responseSerializer: URLResponseSerializer(), completionHandler: completionHandler)
     }
 
@@ -502,7 +502,7 @@ public final class DownloadRequest: Request, @unchecked Sendable {
                              dataPreprocessor: any DataPreprocessor = DataResponseSerializer.defaultDataPreprocessor,
                              emptyResponseCodes: Set<Int> = DataResponseSerializer.defaultEmptyResponseCodes,
                              emptyRequestMethods: Set<HTTPMethod> = DataResponseSerializer.defaultEmptyRequestMethods,
-                             completionHandler: @escaping @Sendable (AFDownloadResponse<Data>) -> Void) -> Self {
+                             completionHandler: @escaping  (AFDownloadResponse<Data>) -> sending Void) -> Self {
         response(queue: queue,
                  responseSerializer: DataResponseSerializer(dataPreprocessor: dataPreprocessor,
                                                             emptyResponseCodes: emptyResponseCodes,
@@ -532,7 +532,7 @@ public final class DownloadRequest: Request, @unchecked Sendable {
                                encoding: String.Encoding? = nil,
                                emptyResponseCodes: Set<Int> = StringResponseSerializer.defaultEmptyResponseCodes,
                                emptyRequestMethods: Set<HTTPMethod> = StringResponseSerializer.defaultEmptyRequestMethods,
-                               completionHandler: @escaping @Sendable (AFDownloadResponse<String>) -> Void) -> Self {
+                               completionHandler: @escaping  (AFDownloadResponse<String>) -> sending Void) -> Self {
         response(queue: queue,
                  responseSerializer: StringResponseSerializer(dataPreprocessor: dataPreprocessor,
                                                               encoding: encoding,
@@ -564,7 +564,7 @@ public final class DownloadRequest: Request, @unchecked Sendable {
                              emptyResponseCodes: Set<Int> = JSONResponseSerializer.defaultEmptyResponseCodes,
                              emptyRequestMethods: Set<HTTPMethod> = JSONResponseSerializer.defaultEmptyRequestMethods,
                              options: JSONSerialization.ReadingOptions = .allowFragments,
-                             completionHandler: @escaping @Sendable (AFDownloadResponse<Any>) -> Void) -> Self {
+                             completionHandler: @escaping  (AFDownloadResponse<Any>) -> sending Void) -> Self {
         response(queue: queue,
                  responseSerializer: JSONResponseSerializer(dataPreprocessor: dataPreprocessor,
                                                             emptyResponseCodes: emptyResponseCodes,
@@ -596,7 +596,7 @@ public final class DownloadRequest: Request, @unchecked Sendable {
                                                 decoder: any DataDecoder = JSONDecoder(),
                                                 emptyResponseCodes: Set<Int> = DecodableResponseSerializer<T>.defaultEmptyResponseCodes,
                                                 emptyRequestMethods: Set<HTTPMethod> = DecodableResponseSerializer<T>.defaultEmptyRequestMethods,
-                                                completionHandler: @escaping @Sendable (AFDownloadResponse<T>) -> Void) -> Self where T: Sendable {
+                                                completionHandler: @escaping (AFDownloadResponse<T>) -> sending Void) -> Self where T: Sendable {
         response(queue: queue,
                  responseSerializer: DecodableResponseSerializer(dataPreprocessor: dataPreprocessor,
                                                                  decoder: decoder,

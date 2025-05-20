@@ -64,7 +64,7 @@ open class NetworkReachabilityManager: @unchecked Sendable {
 
     /// A closure executed when the network reachability status changes. The closure takes a single argument: the
     /// network reachability status.
-    public typealias Listener = @Sendable (NetworkReachabilityStatus) -> Void
+    public typealias Listener = (NetworkReachabilityStatus) -> sending Void
 
     /// Default `NetworkReachabilityManager` for the zero address and a `listenerQueue` of `.main`.
     public static let `default` = NetworkReachabilityManager()
@@ -165,7 +165,7 @@ open class NetworkReachabilityManager: @unchecked Sendable {
     @preconcurrency
     @discardableResult
     open func startListening(onQueue queue: DispatchQueue = .main,
-                             onUpdatePerforming listener: @escaping Listener) -> Bool {
+                             onUpdatePerforming listener: @escaping Listener) -> sending Bool {
         stopListening()
 
         mutableState.write { state in
